@@ -1,0 +1,28 @@
+# CMake
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
+
+# CMake Builds & Ninja
+/build
+build.ninja
+.ninja_deps
+.ninja_log
+
+# Other tools
+.cache
+
+# vcpkg
+vcpkg_installed
+vcpkg-manifest-install.log
+
+# Project-specific
+bin/
