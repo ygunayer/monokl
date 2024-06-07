@@ -19,4 +19,4 @@ add_executable(${PROJECT_NAME} src/main.cpp)
 find_package(SDL2 REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE SDL2::SDL2main SDL2::SDL2image fmt::fmt)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${SDL2_LIBRARIES} fmt::fmt)
