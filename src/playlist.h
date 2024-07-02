@@ -1,10 +1,20 @@
-#ifndef ZENNUBE_PLAYLIST_H
-#define ZENNUBE_PLAYLIST_H
+#ifndef MONOKL__PLAYLIST_H
+#define MONOKL__PLAYLIST_H
 
+#include <memory>
 #include <string>
 #include <vector>
+#include <filesystem>
+#include <chrono>
 
-namespace zennube {
+#include <sail-c++/sail-c++.h>
+#include <sail-c++/codec_info.h>
+#include <sail-c++/utils.h>
+#include <sail-c++/image_input.h>
+
+#include "logging.h"
+
+namespace monokl {
 
 typedef enum {
   PlaylistSortOrderNone,
@@ -29,7 +39,7 @@ struct PlaylistEntry {
 struct PlaylistEntryComparator {
   PlaylistSortOrder sort_order;
   PlaylistEntryComparator(const PlaylistSortOrder& sort_order);
-  bool operator()(const PlaylistEntry& a, const PlaylistEntry& b) const;
+  bool operator()(const std::shared_ptr<PlaylistEntry>& a, const std::shared_ptr<PlaylistEntry>& b) const;
 };
 
 class Playlist {
@@ -37,9 +47,21 @@ public:
   Playlist();
 
   void set_sort_order(const PlaylistSortOrder& sort_order);
+  void reload_images_from(const std::vector<std::string>& file_paths);
 
-  std::vector<PlaylistEntry> entries;
+  std::shared_ptr<PlaylistEntry> get_current() const;
+
+  std::shared_ptr<PlaylistEntry> advance(int by);
+  std::shared_ptr<PlaylistEntry> go_to_first();
+  std::shared_ptr<PlaylistEntry> go_to_last();
+
+  std::vector<std::shared_ptr<PlaylistEntry>> entries;
   PlaylistOptions options;
+
+  std::shared_ptr<PlaylistEntry> get_current_entry() const;
+private:
+  int idx = -1;
+  unsigned int count = 0;
 };
 
 }

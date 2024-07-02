@@ -1,6 +1,8 @@
-#ifndef ZENNUBE_APPLICATION_H
-#define ZENNUBE_APPLICATION_H
+#ifndef MONOKL__APPLICATION_H
+#define MONOKL__APPLICATION_H
 
+#include <memory>
+#include <unordered_map>
 #include <vector>
 #include <string>
 #include <filesystem>
@@ -15,17 +17,17 @@
 #include <SDL2/SDL_stdinc.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_hints.h>
+#include <SDL2/SDL_keycode.h>
 
-#include <sail-c++/sail-c++.h>
-#include <sail-c++/codec_info.h>
-#include <sail-c++/utils.h>
-#include <sail-c++/image_input.h>
+#include <sail-c++/log.h>
+#include <sail-common/log.h>
 
 #include "playlist.h"
 #include "logging.h"
 #include "error.h"
+#include "window.h"
 
-namespace zennube {
+namespace monokl {
 
 class Application {
 public:
@@ -33,15 +35,12 @@ public:
   ~Application();
 
   void run_main_loop();
-  void load_playlist_from(const std::vector<std::string>& files);
 
-  Playlist playlist;
-  std::vector<std::string> dropped_files;
+  std::shared_ptr<Window> create_main_window(const WindowOptions& options);
 
 private:
-  SDL_Window* window = nullptr;
-  SDL_Renderer* renderer = nullptr;
-  SDL_Texture* main_tex = nullptr;
+  unsigned int focused_window_id = 0;
+  std::shared_ptr<Window> window = nullptr;
 };
 
 struct PersistentAppState {

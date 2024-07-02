@@ -1,5 +1,5 @@
-#ifndef ZENNUBE_LOGGING_H
-#define ZENNUBE_LOGGING_H
+#ifndef MONOKL__LOGGING_H
+#define MONOKL__LOGGING_H
 
 #include <SDL2/SDL_log.h>
 

@@ -1,0 +1,6 @@
+{
+  "includePath": [
+    "${workspaceFolder}/src/**",
+    "${vcpkgRoot}/**"
+  ]
+}
