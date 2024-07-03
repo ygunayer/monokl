@@ -1,13 +1,8 @@
 {
   "dependencies": [
-    {
-      "name": "fmt"
-    },
-    {
-      "name": "sail"
-    },
-    {
-      "name": "sdl2"
-    }
+    "fmt",
+    "sail",
+    "sdl2",
+    "toml11"
   ]
 }

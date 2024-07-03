@@ -84,12 +84,24 @@ std::shared_ptr<PlaylistEntry> Playlist::get_current() const {
   if (idx < 0 || idx >= count) {
     return nullptr;
   }
-
   return entries[idx];
 }
 
+unsigned int Playlist::size() const {
+  return count;
+}
+
+int Playlist::current_index() const {
+  return idx;
+}
+
 std::shared_ptr<PlaylistEntry> Playlist::advance(int by) {
-  idx = (idx + by) % count;
+  idx += by;
+  if (idx < 0) {
+    idx = count + by;
+  } else {
+    idx = idx % count;
+  }
   return get_current();
 }
 

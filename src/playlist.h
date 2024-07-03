@@ -51,6 +51,9 @@ public:
 
   std::shared_ptr<PlaylistEntry> get_current() const;
 
+  unsigned int size() const;
+  int current_index() const;
+
   std::shared_ptr<PlaylistEntry> advance(int by);
   std::shared_ptr<PlaylistEntry> go_to_first();
   std::shared_ptr<PlaylistEntry> go_to_last();
@@ -58,7 +61,6 @@ public:
   std::vector<std::shared_ptr<PlaylistEntry>> entries;
   PlaylistOptions options;
 
-  std::shared_ptr<PlaylistEntry> get_current_entry() const;
 private:
   int idx = -1;
   unsigned int count = 0;

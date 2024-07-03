@@ -17,6 +17,7 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 find_package(SDL2 CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(SailC++ CONFIG REQUIRED)
+find_package(toml11 CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME}
   PRIVATE
@@ -24,4 +25,5 @@ target_link_libraries(${PROJECT_NAME}
   $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
   fmt::fmt
   SAIL::sail-c++
+  toml11::toml11
 )

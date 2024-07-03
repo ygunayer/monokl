@@ -69,7 +69,14 @@ Window::~Window() {
 }
 
 void Window::refresh_size() {
+  int old_w = window_rect.w;
+  int old_h = window_rect.h;
   SDL_GetWindowSize(window, &window_rect.w, &window_rect.h);
+
+  if (old_w == window_rect.w && old_h == window_rect.h) {
+    return;
+  }
+
   fmt::println("Window size updated: {}x{}", window_rect.w, window_rect.h);
   recalculate_render_rect();
 }
@@ -152,7 +159,8 @@ void Window::reload_current_image() {
     return;
   }
 
-  SDL_SetWindowTitle(window, entry->name.c_str());
+  std::string title = fmt::format("[{}/{}] {}", playlist->current_index() + 1, playlist->size(), entry->name);
+  SDL_SetWindowTitle(window, title.c_str());
 
   sail::image_input input(entry->path);
   sail::image image = input.next_frame();
