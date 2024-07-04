@@ -1,8 +1,24 @@
 # monokl
 Monokl is a lightweight and user-friendly image viewer that runs on Linux, MacOS and Windows.
 
+![Screenshot on MacOS](./ss-macos.png)
+
 > [!WARNING]  
 This project is a work in progress.
+
+## Usage
+Drag and drop any number of files and folders onto your monokl window and it will load all valid images from in those folders non-recursively.
+
+You can then browse those images using the right and left arrows, as well as home and end buttons. See the following list of keyboard shortcuts
+
+| Key Combination | Action |
+|-----------------|--------|
+| Left Arrow | Go to previous image. Wraps around to the end |
+| Right Arrow | Go to next image. Wraps around to the beginning |
+| Home | Go to the first image |
+| End | Go to the last image |
+| F | Toggle the current image as favorite |
+| Shift+F | Toggle between showing only favorited images, or all of them |
 
 ## Development
 ### Building
