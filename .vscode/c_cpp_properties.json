@@ -1,6 +1,34 @@
 {
-  "includePath": [
-    "${workspaceFolder}/src/**",
-    "${vcpkgRoot}/**"
+  "env": {
+    "myDefaultIncludePath": [
+      "${workspaceFolder}/**",
+      "${vcpkgRoot}/**"
+    ]
+  },
+  "configurations": [
+    {
+      "name": "Mac",
+      "includePath": [
+        "${myDefaultIncludePath}"
+      ],
+      "cStandard": "c99",
+      "cppStandard": "c++17"
+    },
+    {
+      "name": "Linux",
+      "includePath": [
+        "${myDefaultIncludePath}"
+      ],
+      "cStandard": "c99",
+      "cppStandard": "c++17"
+    },
+    {
+      "name": "Win32",
+      "includePath": [
+        "${myDefaultIncludePath}"
+      ],
+      "cStandard": "c99",
+      "cppStandard": "c++17"
+    }
   ]
 }
