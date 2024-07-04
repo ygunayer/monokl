@@ -34,6 +34,8 @@ struct PlaylistEntry {
   std::string name;
   std::string path;
   long last_modified_at;
+  bool is_favorite = false;
+  bool is_hidden = false;
 };
 
 struct PlaylistEntryComparator {
@@ -58,7 +60,12 @@ public:
   std::shared_ptr<PlaylistEntry> go_to_first();
   std::shared_ptr<PlaylistEntry> go_to_last();
 
-  std::vector<std::shared_ptr<PlaylistEntry>> entries;
+  void refresh_shown_entries();
+  void toggle_only_favorites();
+  void toggle_skip_hidden();
+
+  std::vector<std::shared_ptr<PlaylistEntry>> all_entries;
+  std::vector<std::shared_ptr<PlaylistEntry>> shown_entries;
   PlaylistOptions options;
 
 private:

@@ -49,12 +49,12 @@ public:
   void run_main_loop();
 
   std::shared_ptr<Window> create_main_window(const WindowOptions& options);
-  std::shared_ptr<ApplicationSettings> get_settings();
+  std::shared_ptr<ApplicationSettings> get_settings() const;
 
 private:
   unsigned int focused_window_id = 0;
   std::shared_ptr<Window> window = nullptr;
-  ApplicationSettings settings;
+  std::shared_ptr<ApplicationSettings> settings;
 };
 
 }

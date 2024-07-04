@@ -46,11 +46,16 @@ public:
   void render();
 
   void refresh_size();
+  void refresh_title();
+  void refresh_title(const std::shared_ptr<PlaylistEntry>& entry);
 
   void reload_current_image();
   void playlist_advance(int by);
   void playlist_go_to_first();
   void playlist_go_to_last();
+
+  void playlist_toggle_only_favorites();
+  void playlist_toggle_skip_hidden();
 
 private:
   friend class Application;

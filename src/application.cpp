@@ -1,10 +1,11 @@
 #include "application.h"
+#include "logging.h"
 #include <SDL_keycode.h>
 
 using namespace monokl;
 
 std::filesystem::path ApplicationSettings::get_settings_path() {
-  return Util::get_user_home_dir().append(".monokldb");
+  return Util::get_user_home_dir().append(".monokl").append("settings.toml");
 }
 
 ApplicationSettings ApplicationSettings::load() {
@@ -20,11 +21,18 @@ ApplicationSettings ApplicationSettings::load() {
 
   ApplicationSettings settings;
 
-  auto favorites = toml::find<std::vector<std::string>>(data, "hidden");
+  auto favorites = toml::find<std::vector<std::string>>(data, "favorites");
   auto hidden = toml::find<std::vector<std::string>>(data, "hidden");
 
-  settings.favorites = std::set(favorites.begin(), favorites.end());
-  settings.hidden = std::set(hidden.begin(), hidden.end());
+  for (const auto& favorite : favorites) {
+    settings.favorites.insert(favorite);
+  }
+
+  for (const auto& hide : hidden) {
+    settings.hidden.insert(hide);
+  }
+
+  log_debug("Loaded %lu favorites and %lu hidden images", settings.favorites.size(), settings.hidden.size());
 
   settings.playlist_options.only_favorites = toml::find_or<bool>(data, "playlist.only_favorites", false);
   settings.playlist_options.skip_hidden = toml::find_or<bool>(data, "playlist.skip_hidden", true);
@@ -67,13 +75,16 @@ Application::Application() {
 
   sail::log::set_barrier(SailLogLevel::SAIL_LOG_LEVEL_WARNING);
 
-  settings = ApplicationSettings::load();
+  settings = std::make_shared<ApplicationSettings>(ApplicationSettings::load());
 
   log_debug("SDL initialized");
 }
 
 Application::~Application() {
-  settings.save();
+  if (settings != nullptr) {
+    settings->save();
+    settings.reset();
+  }
 
   if (window != nullptr) {
     window.reset();
@@ -81,6 +92,10 @@ Application::~Application() {
 
   log_debug("SDL application terminating");
   SDL_Quit();
+}
+
+std::shared_ptr<ApplicationSettings> Application::get_settings() const {
+  return settings;
 }
 
 void Application::run_main_loop() {
@@ -114,16 +129,28 @@ void Application::run_main_loop() {
               break;
           
             case SDLK_f:
-              auto current_image = window->playlist->get_current();
-              if (current_image != nullptr) {
-                if (settings.favorites.find(current_image->path) != settings.favorites.end()) {
-                  settings.favorites.erase(current_image->path);
-                  log_debug("Removed %s from favorites", current_image->path.c_str());
-                } else {
-                  settings.favorites.insert(current_image->path);
-                  log_debug("Added %s to favorites", current_image->path.c_str());
-                }
+              if (event.key.keysym.mod & KMOD_SHIFT) {
+                window->playlist_toggle_only_favorites();
+                break;
               }
+
+              auto current_image = window->playlist->get_current();
+              if (current_image == nullptr) {
+                break;
+              }
+
+              if (current_image->is_favorite) {
+                current_image->is_favorite = false;
+                settings->favorites.erase(current_image->path);
+                log_debug("Removed %s from favorites", current_image->path.c_str());
+              } else {
+                current_image->is_favorite = true;
+                settings->favorites.insert(current_image->path);
+                log_debug("Added %s to favorites", current_image->path.c_str());
+              }
+
+              window->refresh_title(current_image);
+
               break;
           }
         } break;
@@ -149,6 +176,16 @@ void Application::run_main_loop() {
 
         case SDL_DROPCOMPLETE: {
           window->end_drop_files();
+
+          for (auto& entry : window->playlist->all_entries) {
+            if (settings->favorites.find(entry->path) != settings->favorites.end()) {
+              entry->is_favorite = true;
+            }
+
+            if (settings->hidden.find(entry->path) != settings->hidden.end()) {
+              entry->is_hidden = true;
+            }
+          }
         } break;
       }
     }

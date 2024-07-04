@@ -154,13 +154,11 @@ void Window::reload_current_image() {
   image_rect.y = 0;
 
   auto entry = playlist->get_current();
+  refresh_title(entry);
+
   if (entry == nullptr) {
-    SDL_SetWindowTitle(window, "monokl");
     return;
   }
-
-  std::string title = fmt::format("[{}/{}] {}", playlist->current_index() + 1, playlist->size(), entry->name);
-  SDL_SetWindowTitle(window, title.c_str());
 
   sail::image_input input(entry->path);
   sail::image image = input.next_frame();
@@ -207,4 +205,29 @@ void Window::reload_current_image() {
   image_rect.h = image.height();
 
   recalculate_render_rect();
+}
+
+void Window::refresh_title() {
+  refresh_title(playlist->get_current());
+}
+
+void Window::refresh_title(const std::shared_ptr<PlaylistEntry>& entry) {
+  if (entry == nullptr) {
+    SDL_SetWindowTitle(window, "monokl");
+  } else {
+    std::string title = fmt::format("{}{}/{} - {}", entry->is_favorite ? "♥" : "", playlist->current_index() + 1, playlist->size(), entry->name);
+    SDL_SetWindowTitle(window, title.c_str());
+  }
+}
+
+void Window::playlist_toggle_only_favorites() {
+  playlist->options.only_favorites = !playlist->options.only_favorites;
+  playlist->refresh_shown_entries();
+  reload_current_image();
+}
+
+void Window::playlist_toggle_skip_hidden() {
+  playlist->options.skip_hidden = !playlist->options.skip_hidden;
+  playlist->refresh_shown_entries();
+  reload_current_image();
 }
