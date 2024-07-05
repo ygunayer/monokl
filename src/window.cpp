@@ -1,4 +1,5 @@
 #include "window.h"
+#include "logging.h"
 #include <SDL_surface.h>
 #include <SDL_video.h>
 #include <sail-common/status.h>
@@ -50,6 +51,17 @@ Window::Window(const Application& app, const WindowOptions& options) : app(app),
 }
 
 Window::~Window() {
+  for (auto entry : playlist->all_entries) {
+    if (!entry->is_folder()) {
+      continue;
+    }
+
+    auto folder_entry = std::static_pointer_cast<FolderEntry>(entry);
+    folder_entry->save_settings();
+
+    log_debug("VISIT FOLDER %s", folder_entry->path.string().c_str());
+  }
+
   playlist.reset();
 
   if (main_tex != nullptr) {
@@ -211,13 +223,23 @@ void Window::refresh_title() {
   refresh_title(playlist->get_current());
 }
 
-void Window::refresh_title(const std::shared_ptr<PlaylistEntry>& entry) {
+void Window::refresh_title(const std::shared_ptr<ImageEntry>& entry) {
   if (entry == nullptr) {
     SDL_SetWindowTitle(window, "monokl");
   } else {
-    std::string title = fmt::format("{}{}/{} - {}", entry->is_favorite ? "♥" : "", playlist->current_index() + 1, playlist->size(), entry->name);
+    std::string title = fmt::format("{}{}/{} - {}", entry->is_favorite() ? "♥" : "", playlist->current_index() + 1, playlist->size(), entry->path.filename().string());
     SDL_SetWindowTitle(window, title.c_str());
   }
+}
+
+void Window::playlist_current_toggle_favorite() {
+  playlist->current_toggle_favorite();
+  refresh_title();
+}
+
+void Window::playlist_current_toggle_hidden() {
+  playlist->current_toggle_hidden();
+  refresh_title();
 }
 
 void Window::playlist_toggle_only_favorites() {

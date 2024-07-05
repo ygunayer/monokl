@@ -1,8 +1,102 @@
 #include "playlist.h"
 #include <chrono>
 #include <memory>
+#include <unordered_map>
 
 using namespace monokl;
+
+bool PlaylistEntry::is_folder() const {
+  return false;
+}
+
+bool FolderEntry::is_folder() const {
+  return true;
+}
+
+void FolderEntry::toggle_favorite(const std::string& name) {
+  if (favorites.find(name) != favorites.end()) {
+    favorites.erase(name);
+  } else {
+    favorites.insert(name);
+  }
+
+  settings_changed = true;
+}
+
+void FolderEntry::toggle_hidden(const std::string& name) {
+  if (hidden.find(name) != hidden.end()) {
+    hidden.erase(name);
+  } else {
+    hidden.insert(name);
+  }
+
+  settings_changed = true;
+}
+
+void FolderEntry::reload_settings() {
+  favorites.clear();
+  hidden.clear();
+
+  auto settings_path = path / ".monokl.toml";
+  std::filesystem::directory_entry entry(settings_path);
+  if (!entry.exists() || !entry.is_regular_file()) {
+    return;
+  }
+
+  auto data = toml::parse(settings_path);
+
+  auto favorites = toml::find<std::vector<std::string>>(data, "favorites");
+  auto hidden = toml::find<std::vector<std::string>>(data, "hidden");
+
+  for (const auto& favorite : favorites) {
+    this->favorites.insert(favorite);
+  }
+
+  for (const auto& hide : hidden) {
+    this->hidden.insert(hide);
+  }
+
+  log_debug("Loaded %lu favorites and %lu hidden images for %s", this->favorites.size(), this->hidden.size(), path.string().c_str());
+}
+
+void FolderEntry::save_settings() {
+  if (!settings_changed) {
+    return;
+  }
+
+  auto settings_path = path / ".monokl.toml";
+
+  toml::value data;
+  data["favorites"] = std::vector<std::string>(favorites.begin(), favorites.end());
+  data["hidden"] = std::vector<std::string>(hidden.begin(), hidden.end());
+
+  auto result = toml::format(data);
+  std::ofstream file(settings_path);
+  file << result;
+  file.close();
+
+  log_debug("Saved %lu favorites and %lu hidden images for %s", favorites.size(), hidden.size(), path.string().c_str());
+}
+
+bool ImageEntry::is_folder() const {
+  return false;
+}
+
+bool ImageEntry::is_favorite() const {
+  if (parent == nullptr) {
+    return false;
+  }
+
+  return parent->favorites.find(path.filename()) != parent->favorites.end();
+}
+
+bool ImageEntry::is_hidden() const {
+  if (parent == nullptr) {
+    return false;
+  }
+
+  return parent->hidden.find(path.filename()) != parent->hidden.end();
+}
 
 PlaylistEntryComparator::PlaylistEntryComparator(const PlaylistSortOrder& sort_order)
   : sort_order(sort_order) {
@@ -11,9 +105,9 @@ PlaylistEntryComparator::PlaylistEntryComparator(const PlaylistSortOrder& sort_o
 bool PlaylistEntryComparator::operator()(const std::shared_ptr<PlaylistEntry>& a, const std::shared_ptr<PlaylistEntry>& b) const {
   switch (sort_order) {
     case PlaylistSortOrderName:
-      return a->name < b->name;
+      return a->path < b->path;
     case PlaylistSortOrderNameDesc:
-      return a->name > b->name;
+      return a->path > b->path;
     case PlaylistSortOrderDate:
       return a->last_modified_at < b->last_modified_at;
     case PlaylistSortOrderDateDesc:
@@ -40,10 +134,18 @@ void Playlist::reload_images_from(const std::vector<std::string>& file_paths) {
   all_entries.clear();
   idx = 0;
 
+  std::unordered_map<std::string, std::shared_ptr<FolderEntry>> tmp_folder_entries;
+
   for (const auto& file_path : file_paths) {
     std::filesystem::directory_entry entry(file_path);
 
     if (entry.is_directory()) {
+      auto folder = std::make_shared<FolderEntry>();
+      folder->path = entry.path();
+      folder->last_modified_at = 0; // TODO implement this
+
+      folder->reload_settings();
+
       for (const auto& child : std::filesystem::directory_iterator(file_path)) {
         if (child.is_directory() || child.is_symlink()) {
           continue;
@@ -51,23 +153,42 @@ void Playlist::reload_images_from(const std::vector<std::string>& file_paths) {
 
         auto codec = sail::codec_info::from_path(child.path());
         if (codec.is_valid()) {
-          all_entries.emplace_back(new PlaylistEntry {
-            .name = child.path().filename().string(),
-            .path = child.path().string(),
-            .last_modified_at = 0
-          });
+          auto file = std::make_shared<ImageEntry>();
+          file->path = child.path();
+          file->last_modified_at = 0; // TODO implement this
+          file->parent = folder;
+
+          all_entries.push_back(file);
+          folder->children.push_back(file);
         }
       }
+
+      all_entries.push_back(folder);
     } else {
       auto codec = sail::codec_info::from_path(file_path);
-      if (codec.is_valid()) {
-        std::filesystem::path path(file_path);
-        all_entries.emplace_back(new PlaylistEntry {
-          .name = path.filename().string(),
-          .path = path.string(),
-          .last_modified_at = 0
-        });
+      if (!codec.is_valid()) {
+        continue;
       }
+
+      auto parent_path = entry.path().parent_path();
+      auto parent = tmp_folder_entries[parent_path.string()];
+      if (parent == nullptr) {
+        parent = std::make_shared<FolderEntry>();
+        parent->path = parent_path;
+        parent->last_modified_at = 0; // TODO implement this
+
+        parent->reload_settings();
+
+        tmp_folder_entries[parent_path.string()] = parent;
+        all_entries.push_back(parent);
+      }
+
+      auto file = std::make_shared<ImageEntry>();
+      file->path = entry.path();
+      file->last_modified_at = 0; // TODO implement this
+      file->parent = parent;
+      parent->children.push_back(file);
+      all_entries.push_back(file);
     }
   }
 
@@ -75,14 +196,14 @@ void Playlist::reload_images_from(const std::vector<std::string>& file_paths) {
   auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0);
   auto duration_ms = static_cast<long long int>(duration.count());
 
-  log_debug("Loaded %lu images from %lu files in %lld ms", all_entries.size(), file_paths.size(), duration_ms);
-
   set_sort_order(options.sort_order);
 
   refresh_shown_entries();
+
+  log_debug("Loaded %lu images from %lu entries in %lu files in %lld ms", all_entries.size(), shown_entries.size(), file_paths.size(), duration_ms);
 }
 
-std::shared_ptr<PlaylistEntry> Playlist::get_current() const {
+std::shared_ptr<ImageEntry> Playlist::get_current() const {
   if (idx < 0 || idx >= count) {
     return nullptr;
   }
@@ -97,7 +218,7 @@ int Playlist::current_index() const {
   return idx;
 }
 
-std::shared_ptr<PlaylistEntry> Playlist::advance(int by) {
+std::shared_ptr<ImageEntry> Playlist::advance(int by) {
   idx += by;
   if (idx < 0) {
     idx = count + by;
@@ -107,12 +228,12 @@ std::shared_ptr<PlaylistEntry> Playlist::advance(int by) {
   return get_current();
 }
 
-std::shared_ptr<PlaylistEntry> Playlist::go_to_first() {
+std::shared_ptr<ImageEntry> Playlist::go_to_first() {
   idx = 0;
   return get_current();
 }
 
-std::shared_ptr<PlaylistEntry> Playlist::go_to_last() {
+std::shared_ptr<ImageEntry> Playlist::go_to_last() {
   idx = count - 1;
   return get_current();
 }
@@ -127,6 +248,28 @@ void Playlist::toggle_skip_hidden() {
   refresh_shown_entries();
 }
 
+void Playlist::current_toggle_favorite() {
+  auto current = get_current();
+  if (current == nullptr || current->parent == nullptr) {
+    return;
+  }
+
+  current->parent->toggle_favorite(current->path.filename());
+
+  refresh_shown_entries();
+}
+
+void Playlist::current_toggle_hidden() {
+  auto current = get_current();
+  if (current == nullptr || current->parent == nullptr) {
+    return;
+  }
+
+  current->parent->toggle_hidden(current->path.filename());
+
+  refresh_shown_entries();
+}
+
 void Playlist::refresh_shown_entries() {
   int prev_idx = idx;
   auto current = get_current();
@@ -137,15 +280,21 @@ void Playlist::refresh_shown_entries() {
 
   shown_entries.clear();
   for (const auto& entry : all_entries) {
-    if (options.only_favorites && !entry->is_favorite) {
+    if (entry->is_folder()) {
       continue;
     }
 
-    if (options.skip_hidden && entry->is_hidden) {
+    auto image_entry = std::static_pointer_cast<ImageEntry>(entry);
+
+    if (options.only_favorites && !image_entry->is_favorite()) {
       continue;
     }
 
-    shown_entries.push_back(entry);
+    if (options.skip_hidden && image_entry->is_hidden()) {
+      continue;
+    }
+
+    shown_entries.push_back(image_entry);
 
     if (entry == current) {
       desired_idx = i;

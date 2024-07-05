@@ -32,8 +32,6 @@
 namespace monokl {
 
 struct ApplicationSettings {
-  std::set<std::string> favorites;
-  std::set<std::string> hidden;
   PlaylistOptions playlist_options;
 
   static ApplicationSettings load();

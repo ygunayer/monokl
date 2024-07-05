@@ -47,12 +47,15 @@ public:
 
   void refresh_size();
   void refresh_title();
-  void refresh_title(const std::shared_ptr<PlaylistEntry>& entry);
+  void refresh_title(const std::shared_ptr<ImageEntry>& entry);
 
   void reload_current_image();
   void playlist_advance(int by);
   void playlist_go_to_first();
   void playlist_go_to_last();
+
+  void playlist_current_toggle_favorite();
+  void playlist_current_toggle_hidden();
 
   void playlist_toggle_only_favorites();
   void playlist_toggle_skip_hidden();
