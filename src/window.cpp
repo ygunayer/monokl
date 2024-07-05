@@ -90,7 +90,7 @@ void Window::refresh_size() {
   }
 
   fmt::println("Window size updated: {}x{}", window_rect.w, window_rect.h);
-  recalculate_render_rect();
+  fit_image_to_screen();
 }
 
 void Window::render() {
@@ -134,20 +134,32 @@ void Window::playlist_go_to_last() {
   reload_current_image();
 }
 
-void Window::recalculate_render_rect() {
+void Window::fit_image_to_screen() {
   double aspect_ratio = (double)image_rect.w / (double)image_rect.h;
   double window_aspect_ratio = (double)window_rect.w / (double)window_rect.h;
 
   if (aspect_ratio > window_aspect_ratio) {
-    render_rect.w = window_rect.w;
-    render_rect.h = (int)((double)window_rect.w / aspect_ratio);
+    zoom_level = (double)window_rect.w / (double)image_rect.w;
   } else {
-    render_rect.h = window_rect.h;
-    render_rect.w = (int)((double)window_rect.h * aspect_ratio);
+    zoom_level = (double)window_rect.h / (double)image_rect.h;
   }
+
+  recalculate_render_rect();
+}
+
+void Window::set_original_image_size() {
+  zoom_level = 1.0;
+  recalculate_render_rect();
+}
+
+void Window::recalculate_render_rect() {
+  render_rect.w = image_rect.w * zoom_level;
+  render_rect.h = image_rect.h * zoom_level;
 
   render_rect.x = (window_rect.w - render_rect.w) / 2;
   render_rect.y = (window_rect.h - render_rect.h) / 2;
+
+  refresh_title();
 }
 
 void Window::reload_current_image() {
@@ -216,7 +228,7 @@ void Window::reload_current_image() {
   image_rect.w = image.width();
   image_rect.h = image.height();
 
-  recalculate_render_rect();
+  fit_image_to_screen();
 }
 
 void Window::refresh_title() {
@@ -227,9 +239,20 @@ void Window::refresh_title(const std::shared_ptr<ImageEntry>& entry) {
   if (entry == nullptr) {
     SDL_SetWindowTitle(window, "monokl");
   } else {
-    std::string title = fmt::format("{}{}/{} - {}", entry->is_favorite() ? "♥" : "", playlist->current_index() + 1, playlist->size(), entry->path.filename().string());
+    int zoom_percentage = (int)(zoom_level * 100);
+    std::string title = fmt::format("[{}%] {}{}/{} - {}", zoom_percentage, entry->is_favorite() ? "♥" : "", playlist->current_index() + 1, playlist->size(), entry->path.filename().string());
     SDL_SetWindowTitle(window, title.c_str());
   }
+}
+
+void Window::change_zoom(float by) {
+  zoom_level += by;
+  if (zoom_level < 0.1) {
+    zoom_level = 0.1;
+  } else if (zoom_level > 10.0) {
+    zoom_level = 10.0;
+  }
+  recalculate_render_rect();
 }
 
 void Window::playlist_current_toggle_favorite() {

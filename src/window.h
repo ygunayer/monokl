@@ -79,7 +79,11 @@ private:
   SDL_Rect window_rect;
   SDL_Rect image_rect;
   SDL_Rect render_rect;
+  double zoom_level = 1.0;
   void recalculate_render_rect();
+  void fit_image_to_screen();
+  void set_original_image_size();
+  void change_zoom(float by);
 
   unsigned int id = 0;
   bool has_focus = false;

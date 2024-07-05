@@ -1,6 +1,8 @@
 #include "application.h"
 #include "logging.h"
+#include <SDL_events.h>
 #include <SDL_keycode.h>
+#include <SDL_scancode.h>
 
 using namespace monokl;
 
@@ -96,34 +98,51 @@ void Application::run_main_loop() {
         } break;
 
         case SDL_KEYDOWN: {
-          switch (event.key.keysym.sym) {
-            case SDLK_LEFT:
+          switch (event.key.keysym.scancode) {
+            case SDL_SCANCODE_LEFT:
               window->playlist_advance(-1);
               break;
 
-            case SDLK_RIGHT:
+            case SDL_SCANCODE_RIGHT:
               window->playlist_advance(1);
               break;
 
-            case SDLK_HOME:
+            case SDL_SCANCODE_HOME:
               window->playlist_go_to_first();
               break;
 
-            case SDLK_END:
+            case SDL_SCANCODE_END:
               window->playlist_go_to_last();
               break;
-          
-            case SDLK_f:
+
+            case SDL_SCANCODE_KP_0:
+              window->fit_image_to_screen();
+              break;
+
+            case SDL_SCANCODE_KP_1:
+              window->set_original_image_size();
+              break;
+
+            case SDL_SCANCODE_F:
               if (event.key.keysym.mod & KMOD_SHIFT) {
                 window->playlist_toggle_only_favorites();
                 break;
               }
-
               window->playlist_current_toggle_favorite();
+              break;
 
+            default:
               break;
           }
         } break;
+
+        case SDL_MOUSEWHEEL:
+          if (event.wheel.y > 0) {
+            window->change_zoom(0.1);
+          } else if (event.wheel.y < 0) {
+            window->change_zoom(-0.1);
+          }
+          break;
 
         case SDL_WINDOWEVENT: {
           switch (event.window.event) {
