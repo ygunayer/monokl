@@ -7,10 +7,18 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Launch",
-      "program": "${workspaceFolder}/bin/monokl",
+      "name": "Launch (LLDB)",
+      "program": "${input:debugBinaryPath}",
       "args": [],
       "cwd": "${workspaceFolder}"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "debugBinaryPath",
+      "type": "command",
+      "command": "cpptools.activeConfigCustomVariable",
+      "args": "debugBinaryPath"
     }
   ]
 }

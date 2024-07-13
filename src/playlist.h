@@ -16,6 +16,7 @@
 #include <toml.hpp>
 
 #include "logging.h"
+#include "util.h"
 
 namespace monokl {
 

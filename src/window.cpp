@@ -27,7 +27,16 @@ WindowOptions::WindowOptions(const WindowOptions& options) {
 }
 
 Window::Window(const Application& app, const WindowOptions& options) : app(app), options(options) {
-  SDL_Window* wnd = SDL_CreateWindow("monokl", 0, 0, 1366, 768, SDL_WINDOW_RESIZABLE | SDL_WINDOW_MAXIMIZED | OTHER_WINDOW_FLAGS);
+  uint32_t flags = SDL_WINDOW_RESIZABLE | OTHER_WINDOW_FLAGS;
+
+  int x = options.centered ? SDL_WINDOWPOS_CENTERED : options.x;
+  int y = options.centered ? SDL_WINDOWPOS_CENTERED : options.y;
+
+  if (options.maximized) {
+    flags |= SDL_WINDOW_MAXIMIZED;
+  }
+
+  SDL_Window* wnd = SDL_CreateWindow("monokl", x, y, 1366, 768, flags);
   if (wnd == nullptr) {
     throw MonoklError(fmt::format("Failed to create window: %s", SDL_GetError()));
   }
@@ -58,8 +67,6 @@ Window::~Window() {
 
     auto folder_entry = std::static_pointer_cast<FolderEntry>(entry);
     folder_entry->save_settings();
-
-    log_debug("VISIT FOLDER %s", folder_entry->path.string().c_str());
   }
 
   playlist.reset();
@@ -184,17 +191,18 @@ void Window::reload_current_image() {
     return;
   }
 
-  sail::image_input input(entry->path);
+  std::string image_path = entry->path.string();
+  sail::image_input input(image_path);
   sail::image image = input.next_frame();
 
   if (!image.is_valid()) {
-    log_error("Failed to load image: %s", entry->path.c_str());
+    log_error("Failed to load image: %s", image_path.c_str());
     return;
   }
 
   auto convert_result = image.convert(SAIL_PIXEL_FORMAT_BPP32_RGBA);
   if (convert_result != SAIL_OK) {
-    log_error("Failed to convert image to RGBA: %s", entry->path.c_str());
+    log_error("Failed to convert image to RGBA: %s", image_path.c_str());
     return;
   }
 
@@ -211,13 +219,13 @@ void Window::reload_current_image() {
   );
 
   if (surface == nullptr) {
-    log_error("Failed to create surface from image: %s", entry->path.c_str());
+    log_error("Failed to create surface from image: %s", image_path.c_str());
     return;
   }
 
   SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer, surface);
   if (tex == nullptr) {
-    log_error("Failed to create texture from surface: %s", entry->path.c_str());
+    log_error("Failed to create texture from surface: %s", image_path.c_str());
     return;
   }
 
@@ -240,7 +248,7 @@ void Window::refresh_title(const std::shared_ptr<ImageEntry>& entry) {
     SDL_SetWindowTitle(window, "monokl");
   } else {
     int zoom_percentage = (int)(zoom_level * 100);
-    std::string title = fmt::format("[{}%] {}{}/{} - {}", zoom_percentage, entry->is_favorite() ? "♥" : "", playlist->current_index() + 1, playlist->size(), entry->path.filename().string());
+    auto title = fmt::format("[{}%] {}{}/{} - {}", zoom_percentage, entry->is_favorite() ? "♥" : "", playlist->current_index() + 1, playlist->size(), entry->path.filename().string());
     SDL_SetWindowTitle(window, title.c_str());
   }
 }

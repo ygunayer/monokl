@@ -87,7 +87,7 @@ bool ImageEntry::is_favorite() const {
     return false;
   }
 
-  return parent->favorites.find(path.filename()) != parent->favorites.end();
+  return parent->favorites.find(path.filename().string()) != parent->favorites.end();
 }
 
 bool ImageEntry::is_hidden() const {
@@ -95,7 +95,7 @@ bool ImageEntry::is_hidden() const {
     return false;
   }
 
-  return parent->hidden.find(path.filename()) != parent->hidden.end();
+  return parent->hidden.find(path.filename().string()) != parent->hidden.end();
 }
 
 PlaylistEntryComparator::PlaylistEntryComparator(const PlaylistSortOrder& sort_order)
@@ -132,9 +132,9 @@ void Playlist::reload_images_from(const std::vector<std::string>& file_paths) {
 
   shown_entries.clear();
   all_entries.clear();
-  idx = 0;
+  idx = -1;
 
-  std::unordered_map<std::string, std::shared_ptr<FolderEntry>> tmp_folder_entries;
+  std::unordered_map<std::filesystem::path, std::shared_ptr<FolderEntry>> tmp_folder_entries;
 
   for (const auto& file_path : file_paths) {
     std::filesystem::directory_entry entry(file_path);
@@ -151,27 +151,29 @@ void Playlist::reload_images_from(const std::vector<std::string>& file_paths) {
           continue;
         }
 
-        auto codec = sail::codec_info::from_path(child.path());
-        if (codec.is_valid()) {
-          auto file = std::make_shared<ImageEntry>();
-          file->path = child.path();
-          file->last_modified_at = 0; // TODO implement this
-          file->parent = folder;
+        std::string child_path = child.path().string();
 
-          all_entries.push_back(file);
-          folder->children.push_back(file);
+        if (!Util::is_valid_image(child.path())) {
+          continue;
         }
+
+        auto file = std::make_shared<ImageEntry>();
+        file->path = child_path;
+        file->last_modified_at = 0; // TODO implement this
+        file->parent = folder;
+
+        all_entries.push_back(file);
+        folder->children.push_back(file);
       }
 
       all_entries.push_back(folder);
     } else {
-      auto codec = sail::codec_info::from_path(file_path);
-      if (!codec.is_valid()) {
+      if (!Util::is_valid_image(entry.path())) {
         continue;
       }
 
       auto parent_path = entry.path().parent_path();
-      auto parent = tmp_folder_entries[parent_path.string()];
+      auto parent = tmp_folder_entries[parent_path];
       if (parent == nullptr) {
         parent = std::make_shared<FolderEntry>();
         parent->path = parent_path;
@@ -179,7 +181,7 @@ void Playlist::reload_images_from(const std::vector<std::string>& file_paths) {
 
         parent->reload_settings();
 
-        tmp_folder_entries[parent_path.string()] = parent;
+        tmp_folder_entries[parent_path] = parent;
         all_entries.push_back(parent);
       }
 
@@ -254,7 +256,7 @@ void Playlist::current_toggle_favorite() {
     return;
   }
 
-  current->parent->toggle_favorite(current->path.filename());
+  current->parent->toggle_favorite(current->path.filename().string());
 
   refresh_shown_entries();
 }
@@ -265,7 +267,7 @@ void Playlist::current_toggle_hidden() {
     return;
   }
 
-  current->parent->toggle_hidden(current->path.filename());
+  current->parent->toggle_hidden(current->path.filename().string());
 
   refresh_shown_entries();
 }
