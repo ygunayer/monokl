@@ -64,7 +64,12 @@ Application::Application() {
 
   settings = std::make_shared<ApplicationSettings>(ApplicationSettings::load());
 
-  log_debug("SDL initialized");
+  log_debug("Application initialized");
+  log_debug("Library versions:");
+  log_debug(" - SDL2: %d.%d.%d", SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_PATCHLEVEL);
+  log_debug(" - Sail: %s", SAIL_VERSION_STRING);
+  log_debug(" - fmt: %d.%d.%d", FMT_VERSION / 10000, FMT_VERSION / 100 % 100, FMT_VERSION % 100);
+  log_debug(" - toml11: %d.%d.%d", TOML11_VERSION_MAJOR, TOML11_VERSION_MINOR, TOML11_VERSION_PATCH);
 }
 
 Application::~Application() {

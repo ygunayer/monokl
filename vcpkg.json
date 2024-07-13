@@ -4,5 +4,23 @@
     "sail",
     "sdl2",
     "toml11"
+  ],
+  "overrides": [
+    {
+      "name": "fmt",
+      "version": "10.2.1"
+    },
+    {
+      "name": "sail",
+      "version": "0.9.5"
+    },
+    {
+      "name": "sdl2",
+      "version": "2.30.5"
+    },
+    {
+      "name": "toml11",
+      "version": "4.0.0"
+    }
   ]
 }
