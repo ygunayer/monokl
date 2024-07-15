@@ -23,9 +23,21 @@ ApplicationSettings ApplicationSettings::load() {
 
   ApplicationSettings settings;
 
-  settings.playlist_options.only_favorites = toml::find_or<bool>(data, "playlist.only_favorites", false);
-  settings.playlist_options.skip_hidden = toml::find_or<bool>(data, "playlist.skip_hidden", true);
-  settings.playlist_options.sort_order = static_cast<PlaylistSortOrder>(toml::find_or<int>(data, "playlist.sort_order", 0));
+  if (data.contains("playlist") && data.at("playlist").is_table()) {
+    auto playlist_entry = data.at("playlist");
+
+    if (playlist_entry.contains("only_favorites") && playlist_entry.at("only_favorites").is_boolean()) {
+      settings.playlist_options.only_favorites = toml::find<bool>(playlist_entry, "only_favorites");
+    }
+
+    if (playlist_entry.contains("skip_hidden") && playlist_entry.at("skip_hidden").is_boolean()) {
+      settings.playlist_options.skip_hidden = toml::find<bool>(playlist_entry, "skip_hidden");
+    }
+
+    if (playlist_entry.contains("sort_order") && playlist_entry.at("sort_order").is_integer()) {
+      settings.playlist_options.sort_order = static_cast<PlaylistSortOrder>(toml::find<int>(playlist_entry, "sort_order"));
+    }
+  }
 
   log_debug("Loaded settings from %s", path.string().c_str());
 

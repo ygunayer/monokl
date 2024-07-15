@@ -45,15 +45,18 @@ void FolderEntry::reload_settings() {
 
   auto data = toml::parse(settings_path);
 
-  auto favorites = toml::find<std::vector<std::string>>(data, "favorites");
-  auto hidden = toml::find<std::vector<std::string>>(data, "hidden");
-
-  for (const auto& favorite : favorites) {
-    this->favorites.insert(favorite);
+  if (data.contains("favorites") && data.at("favorites").is_array()) {
+    auto favorites = toml::find<std::vector<std::string>>(data, "favorites");
+    for (const auto& favorite : favorites) {
+      this->favorites.insert(favorite);
+    }
   }
 
-  for (const auto& hide : hidden) {
-    this->hidden.insert(hide);
+  if (data.contains("hidden") && data.at("hidden").is_array()) {
+    auto hidden = toml::find<std::vector<std::string>>(data, "hidden");
+    for (const auto& h : hidden) {
+      this->hidden.insert(h);
+    }
   }
 
   log_debug("Loaded %lu favorites and %lu hidden images for %s", this->favorites.size(), this->hidden.size(), path.string().c_str());
@@ -132,7 +135,7 @@ void Playlist::reload_images_from(const std::vector<std::string>& file_paths) {
 
   shown_entries.clear();
   all_entries.clear();
-  idx = -1;
+  idx = 0;
 
   std::unordered_map<std::filesystem::path, std::shared_ptr<FolderEntry>> tmp_folder_entries;
 
@@ -202,7 +205,7 @@ void Playlist::reload_images_from(const std::vector<std::string>& file_paths) {
 
   refresh_shown_entries();
 
-  log_debug("Loaded %lu images from %lu entries in %lu files in %lld ms", all_entries.size(), shown_entries.size(), file_paths.size(), duration_ms);
+  log_debug("Loaded %lu images from %lu entries in %lu files in %lld ms", shown_entries.size(), all_entries.size(), file_paths.size(), duration_ms);
 }
 
 std::shared_ptr<ImageEntry> Playlist::get_current() const {
@@ -273,6 +276,12 @@ void Playlist::current_toggle_hidden() {
 }
 
 void Playlist::refresh_shown_entries() {
+  if (all_entries.empty()) {
+    shown_entries.clear();
+    idx = -1;
+    return;
+  }
+
   int prev_idx = idx;
   auto current = get_current();
 
