@@ -7,7 +7,7 @@
 using namespace monokl;
 
 std::filesystem::path ApplicationSettings::get_settings_path() {
-  return Util::get_user_home_dir().append(".monokl").append("settings.toml");
+  return Util::get_user_home_dir() / ".monokl" / "settings.toml";
 }
 
 ApplicationSettings ApplicationSettings::load() {
