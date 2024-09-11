@@ -29,6 +29,22 @@ You must have the following installed on your machine:
 - CMake
 - vcpkg
 
+#### Compiling on Linux
+Some of the dependencies might rely on components that may not be installed on your machine. To make sure everything just works, make sure to install the following dependencies on your machine:
+
+**Fedora**
+```bash
+# vcpkg requires `libxcrypt` which needs the following to be compiled:
+$ sudo dnf install autoconf automake libtool pkg-config perl libtool
+```
+
+Additionally, you might night to install `Jinja2` globally in your Python environment. After ensuring you have Python and `pip` installed, run the following command:
+```bash
+$ pip install Jinja2
+```
+
+Now you should be able to compile the program on Linux.
+
 #### Generator Setup
 To compile the code you must first generate the build files for your favorite build tool using CMake.
 
