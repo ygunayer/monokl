@@ -3,10 +3,13 @@ Monokl is a lightweight and user-friendly image viewer that runs on Linux, MacOS
 
 ## Preview
 **MacOS**
-![Screenshot on MacOS](./ss-macos.png)
+![Screenshot on MacOS](./docs/ss-macos.png)
 
 **Fedora**
-![Screenshot on Fedora](./ss-fedora.png)
+![Screenshot on Fedora](./docs/ss-fedora.png)
+
+**Windows**
+![Screenshot on Windows](./docs/ss-windows.png)
 
 > [!WARNING]  
 This project is a work in progress.
