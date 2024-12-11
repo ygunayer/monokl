@@ -72,6 +72,14 @@
     "xtr1common": "cpp",
     "xtree": "cpp",
     "xutility": "cpp",
-    "codecvt": "cpp"
+    "codecvt": "cpp",
+    "__bit_reference": "cpp",
+    "__config": "cpp",
+    "__hash_table": "cpp",
+    "__node_handle": "cpp",
+    "__split_buffer": "cpp",
+    "__verbose_abort": "cpp",
+    "execution": "cpp",
+    "string_view": "cpp"
   }
 }

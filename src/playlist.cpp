@@ -131,6 +131,10 @@ void Playlist::set_sort_order(const PlaylistSortOrder& sort_order) {
 }
 
 void Playlist::reload_images_from(const std::vector<std::string>& file_paths) {
+  if (!this->all_entries.empty()) {
+    this->save_settings();
+  }
+
   auto t0 = std::chrono::high_resolution_clock::now();
 
   shown_entries.clear();
@@ -322,4 +326,15 @@ void Playlist::refresh_shown_entries() {
   count = shown_entries.size();
 
   idx = desired_idx < count ? desired_idx : count - 1;
+}
+
+void Playlist::save_settings() const {
+  for (auto entry : this->all_entries) {
+    if (!entry->is_folder()) {
+      continue;
+    }
+
+    auto folder_entry = std::static_pointer_cast<FolderEntry>(entry);
+    folder_entry->save_settings();
+  }
 }

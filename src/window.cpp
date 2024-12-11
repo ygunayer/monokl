@@ -60,15 +60,7 @@ Window::Window(const Application& app, const WindowOptions& options) : app(app),
 }
 
 Window::~Window() {
-  for (auto entry : playlist->all_entries) {
-    if (!entry->is_folder()) {
-      continue;
-    }
-
-    auto folder_entry = std::static_pointer_cast<FolderEntry>(entry);
-    folder_entry->save_settings();
-  }
-
+  playlist->save_settings();
   playlist.reset();
 
   if (main_tex != nullptr) {

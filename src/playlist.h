@@ -93,6 +93,8 @@ public:
   void current_toggle_favorite();
   void current_toggle_hidden();
 
+  void save_settings() const;
+
   std::vector<std::shared_ptr<PlaylistEntry>> all_entries;
   std::vector<std::shared_ptr<ImageEntry>> shown_entries;
   PlaylistOptions options;

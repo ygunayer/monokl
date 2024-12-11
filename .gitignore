@@ -29,5 +29,8 @@ build.ninja
 vcpkg_installed
 vcpkg-manifest-install.log
 
+# IDEs
+.idea
+
 # Project-specific
 bin/
