@@ -14,7 +14,7 @@ int main(int argc, char* argv[]) {
     options.height = 768;
     options.centered = true;
 
-    auto window = app.create_main_window(options);
+    auto window = app.create_window(options);
 
     app.run_main_loop();
   } catch (const MonoklError& e) {

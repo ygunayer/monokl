@@ -80,6 +80,7 @@
     "__split_buffer": "cpp",
     "__verbose_abort": "cpp",
     "execution": "cpp",
-    "string_view": "cpp"
+    "string_view": "cpp",
+    "map": "cpp"
   }
 }

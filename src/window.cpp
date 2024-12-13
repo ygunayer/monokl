@@ -65,17 +65,17 @@ Window::~Window() {
 
   if (main_tex != nullptr) {
     SDL_DestroyTexture(main_tex);
-    log_debug("Texture destroyed");
+    log_debug("[window:%d] Texture destroyed", id);
   }
 
   if (renderer != nullptr) {
     SDL_DestroyRenderer(renderer);
-    log_debug("Renderer destroyed");
+    log_debug("[window:%d] Renderer destroyed", id);
   }
 
   if (window != nullptr) {
     SDL_DestroyWindow(window);
-    log_debug("Window destroyed");
+    log_debug("[window:%d] Window destroyed", id);
   }
 }
 

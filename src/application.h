@@ -5,6 +5,7 @@
 #include <string>
 #include <filesystem>
 #include <set>
+#include <map>
 
 #include <fmt/format.h>
 
@@ -46,12 +47,13 @@ public:
 
   void run_main_loop();
 
-  std::shared_ptr<Window> create_main_window(const WindowOptions& options);
+  std::shared_ptr<Window> create_window(const WindowOptions& options);
   std::shared_ptr<ApplicationSettings> get_settings() const;
 
 private:
   unsigned int focused_window_id = 0;
-  std::shared_ptr<Window> window = nullptr;
+  std::shared_ptr<Window> active_window = nullptr;
+  std::map<int, std::shared_ptr<Window>> windows;
   std::shared_ptr<ApplicationSettings> settings;
 };
 

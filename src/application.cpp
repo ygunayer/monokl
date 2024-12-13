@@ -90,9 +90,11 @@ Application::~Application() {
     settings.reset();
   }
 
-  if (window != nullptr) {
-    window.reset();
+  if (active_window != nullptr) {
+    active_window.reset();
   }
+
+  windows.clear();
 
   log_debug("SDL application terminating");
   SDL_Quit();
@@ -103,49 +105,86 @@ std::shared_ptr<ApplicationSettings> Application::get_settings() const {
 }
 
 void Application::run_main_loop() {
+  std::string os = SDL_GetPlatform();
+
+  int cmd_or_ctrl = (os == "Mac OS X" ? KMOD_GUI : KMOD_CTRL);
+
   bool running = true;
+
   while (running) {
     SDL_Event event;
 
     while (running && SDL_PollEvent(&event)) {
-      switch (event.type) {
-        case SDL_QUIT: {
-          log_debug("User requested exit");
-          running = false;
-        } break;
+      if (event.type == SDL_QUIT) {
+        log_debug("User requested exit");
+        running = false;
+        break;
+      }
 
+      if (event.type == SDL_KEYDOWN &&
+          event.key.keysym.scancode == SDL_SCANCODE_N &&
+          event.key.keysym.mod & cmd_or_ctrl
+        ) {
+        WindowOptions options;
+        options.width = 1366;
+        options.height = 768;
+        options.centered = true;
+        create_window(options);
+      }
+
+      if (event.type == SDL_WINDOWEVENT_FOCUS_GAINED) {
+        auto it = windows.find(event.window.windowID);
+        if (it != windows.end()) {
+          active_window = windows[event.window.windowID];
+        }
+      }
+
+      if (event.type == SDL_WINDOWEVENT_FOCUS_LOST) {
+        auto it = windows.find(event.window.windowID);
+        if (it != windows.end()) {
+          if (active_window != nullptr && active_window->id == event.window.windowID) {
+            active_window = windows[event.window.windowID];
+          }
+        }
+      }
+
+      if (active_window == nullptr) {
+        continue;
+      }
+
+      switch (event.type) {
         case SDL_KEYDOWN: {
           switch (event.key.keysym.scancode) {
             case SDL_SCANCODE_LEFT:
-              window->playlist_advance(-1);
+              active_window->playlist_advance(-1);
               break;
 
             case SDL_SCANCODE_RIGHT:
-              window->playlist_advance(1);
+              active_window->playlist_advance(1);
               break;
 
             case SDL_SCANCODE_HOME:
-              window->playlist_go_to_first();
+              active_window->playlist_go_to_first();
               break;
 
             case SDL_SCANCODE_END:
-              window->playlist_go_to_last();
+              active_window->playlist_go_to_last();
               break;
 
             case SDL_SCANCODE_KP_0:
-              window->fit_image_to_screen();
+              active_window->fit_image_to_screen();
               break;
 
             case SDL_SCANCODE_KP_1:
-              window->set_original_image_size();
+              active_window->set_original_image_size();
               break;
 
             case SDL_SCANCODE_F:
               if (event.key.keysym.mod & KMOD_SHIFT) {
-                window->playlist_toggle_only_favorites();
+                active_window->playlist_toggle_only_favorites();
                 break;
               }
-              window->playlist_current_toggle_favorite();
+              active_window->playlist_current_toggle_favorite();
               break;
 
             default:
@@ -155,9 +194,9 @@ void Application::run_main_loop() {
 
         case SDL_MOUSEWHEEL:
           if (event.wheel.y > 0) {
-            window->change_zoom(0.1);
+            active_window->change_zoom(0.1);
           } else if (event.wheel.y < 0) {
-            window->change_zoom(-0.1);
+            active_window->change_zoom(-0.1);
           }
           break;
 
@@ -165,39 +204,36 @@ void Application::run_main_loop() {
           switch (event.window.event) {
             case SDL_WINDOWEVENT_SIZE_CHANGED:
             case SDL_WINDOWEVENT_RESIZED:
-              window->refresh_size();
+              active_window->refresh_size();
               break;
           }
         } break;
 
         case SDL_DROPBEGIN: {
-          window->begin_drop_files();
+          active_window->begin_drop_files();
         } break;
 
         case SDL_DROPFILE: {
           char* filename = event.drop.file;
-          window->drop_file(filename);
+          active_window->drop_file(filename);
           SDL_free(filename);
         } break;
 
         case SDL_DROPCOMPLETE: {
-          window->end_drop_files();
+          active_window->end_drop_files();
         } break;
       }
     }
 
-    if (window != nullptr) {
-      window->render();
+    for (auto& window : windows) {
+      window.second->render();
     }
   }
 }
 
-std::shared_ptr<Window> Application::create_main_window(const WindowOptions& options) {
-  if (window != nullptr) {
-    throw new MonoklError("Application already has a main window.");
-  }
-
-  Window* window = new Window(*this, options);
-  this->window.reset(window);
-  return this->window;
+std::shared_ptr<Window> Application::create_window(const WindowOptions& options) {
+  auto window = std::shared_ptr<Window>(new Window(*this, options));
+  this->active_window = window;
+  this->windows[window->id] = (window);
+  return window;
 }
