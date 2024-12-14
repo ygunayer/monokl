@@ -1,5 +1,4 @@
-#ifndef MONOKL__APPLICATION_H
-#define MONOKL__APPLICATION_H
+#pragma once
 
 #include <memory>
 #include <string>
@@ -49,14 +48,15 @@ public:
 
   std::shared_ptr<Window> create_window(const WindowOptions& options);
   std::shared_ptr<ApplicationSettings> get_settings() const;
+  std::shared_ptr<Window> get_window_by_id(uint32_t id) const;
 
 private:
   unsigned int focused_window_id = 0;
-  std::shared_ptr<Window> active_window = nullptr;
-  std::map<int, std::shared_ptr<Window>> windows;
+  bool is_first_window = true;
+  int next_window_x = 0;
+  int next_window_y = 0;
+  std::map<uint32_t, std::shared_ptr<Window>> windows;
   std::shared_ptr<ApplicationSettings> settings;
 };
 
 }
-
-#endif

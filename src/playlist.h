@@ -1,5 +1,4 @@
-#ifndef MONOKL__PLAYLIST_H
-#define MONOKL__PLAYLIST_H
+#pragma once
 
 #include <memory>
 #include <string>
@@ -105,5 +104,3 @@ private:
 };
 
 }
-
-#endif

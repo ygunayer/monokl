@@ -1,5 +1,4 @@
-#ifndef MONOKL__ERROR_H
-#define MONOKL__ERROR_H
+#pragma once
 
 #include <string>
 #include <fmt/core.h>
@@ -22,5 +21,3 @@ private:
 };
 
 }
-
-#endif

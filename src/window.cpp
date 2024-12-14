@@ -17,26 +17,22 @@ using namespace monokl;
 
 WindowOptions::WindowOptions() {}
 
-WindowOptions::WindowOptions(const WindowOptions& options) {
-  x = options.x;
-  y = options.y;
-  width = options.width;
-  height = options.height;
-  centered = options.centered;
-  maximized = options.maximized;
-}
+WindowOptions::WindowOptions(const WindowOptions& options) :
+  display_index(options.display_index),
+  x(options.x),
+  y(options.y),
+  width(options.width),
+  height(options.height),
+  maximized(options.maximized) {}
 
 Window::Window(const Application& app, const WindowOptions& options) : app(app), options(options) {
   uint32_t flags = SDL_WINDOW_RESIZABLE | OTHER_WINDOW_FLAGS;
-
-  int x = options.centered ? SDL_WINDOWPOS_CENTERED : options.x;
-  int y = options.centered ? SDL_WINDOWPOS_CENTERED : options.y;
 
   if (options.maximized) {
     flags |= SDL_WINDOW_MAXIMIZED;
   }
 
-  SDL_Window* wnd = SDL_CreateWindow("monokl", x, y, 1366, 768, flags);
+  SDL_Window* wnd = SDL_CreateWindow("monokl", options.x, options.y, options.width, options.height, flags);
   if (wnd == nullptr) {
     throw MonoklError(fmt::format("Failed to create window: %s", SDL_GetError()));
   }

@@ -1,5 +1,4 @@
-#ifndef MONOKL__WINDOW_H
-#define MONOKL__WINDOW_H
+#pragma once
 
 #include <sail-c++/image.h>
 #include <string>
@@ -27,11 +26,11 @@ namespace monokl {
 class Application;
 
 struct WindowOptions {
-  int x = 0;
-  int y = 0;
+  int display_index = 0;
+  int x = SDL_WINDOWPOS_UNDEFINED;
+  int y = SDL_WINDOWPOS_UNDEFINED;
   int width = 1366;
   int height = 768;
-  bool centered = true;
   bool maximized = false;
 
   WindowOptions();
@@ -85,7 +84,7 @@ private:
   void set_original_image_size();
   void change_zoom(float by);
 
-  unsigned int id = 0;
+  uint32_t id = 0;
   bool has_focus = false;
   SDL_Window* window = nullptr;
   SDL_Renderer* renderer = nullptr;
@@ -95,5 +94,3 @@ private:
 };
 
 }
-
-#endif

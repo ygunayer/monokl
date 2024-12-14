@@ -1,5 +1,4 @@
-#ifndef MONOKL__UTIL_H
-#define MONOKL__UTIL_H
+#pragma once
 
 #include <filesystem>
 #include <string>
@@ -36,5 +35,3 @@ public:
 };
 
 };
-
-#endif

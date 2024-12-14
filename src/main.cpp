@@ -10,10 +10,6 @@ int main(int argc, char* argv[]) {
     Application app;
 
     WindowOptions options;
-    options.width = 1366;
-    options.height = 768;
-    options.centered = true;
-
     auto window = app.create_window(options);
 
     app.run_main_loop();

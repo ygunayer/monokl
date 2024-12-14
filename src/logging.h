@@ -1,5 +1,4 @@
-#ifndef MONOKL__LOGGING_H
-#define MONOKL__LOGGING_H
+#pragma once
 
 #include <SDL2/SDL_log.h>
 
@@ -11,5 +10,3 @@
 #define log_warn(...) SDL_LogWarn(SDL_LOG_CATEGORY_CUSTOM, __VA_ARGS__)
 #define log_error(...) SDL_LogError(SDL_LOG_CATEGORY_CUSTOM, __VA_ARGS__)
 #define log_critical(...) SDL_LogCritical(SDL_LOG_CATEGORY_CUSTOM, __VA_ARGS__)
-
-#endif
