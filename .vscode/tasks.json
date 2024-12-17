@@ -1,0 +1,46 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "CMake - Generate",
+      "windows": {
+        "command": "cmake",
+        "args": [
+          "-G",
+          "Visual Studio 20",
+          "-B",
+          "build"
+        ]
+      },
+      "osx": {
+        "command": "cmake",
+        "args": [
+          "-G",
+          "Unix Makefiles",
+          "-B",
+          "build"
+        ]
+      }
+    },
+    {
+      "label": "CMake - Build",
+      "dependsOn": "CMake - Generate",
+      "windows": {
+        "command": "cmake",
+        "args": [
+          "--build",
+          "build",
+          "--config",
+          "Debug"
+        ]
+      },
+      "osx": {
+        "command": "cmake",
+        "args": [
+          "--build",
+          "build"
+        ]
+      }
+    }
+  ]
+}

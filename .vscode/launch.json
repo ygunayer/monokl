@@ -8,16 +8,17 @@
       "type": "lldb",
       "request": "launch",
       "name": "Launch (LLDB)",
-      "program": "${input:debugBinaryPath}",
+      "program": "./bin/monokl",
       "args": [],
-      "cwd": "${workspaceFolder}"
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "CMake - Build"
     }
   ],
   "inputs": [
     {
       "id": "debugBinaryPath",
       "type": "command",
-      "command": "cpptools.activeConfigCustomVariable",
+      //"command": "cpptools.activeConfigCustomVariable",
       "args": "debugBinaryPath"
     }
   ]

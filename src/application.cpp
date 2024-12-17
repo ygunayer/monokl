@@ -1,5 +1,7 @@
 #include "application.h"
 #include "logging.h"
+#include <SDL_video.h>
+#include <optional>
 
 using namespace monokl;
 
@@ -7,9 +9,14 @@ std::filesystem::path ApplicationSettings::get_settings_path() {
   return Util::get_user_home_dir() / ".monokl" / "settings.toml";
 }
 
-ApplicationSettings ApplicationSettings::load() {
-  std::setlocale(LC_ALL, "C.UTF-8");
+ApplicationSettings::ApplicationSettings() {}
 
+ApplicationSettings::ApplicationSettings(const ApplicationSettings& settings) {
+  this->playlist_options = settings.playlist_options;
+  this->action_mappings = settings.action_mappings;
+}
+
+ApplicationSettings ApplicationSettings::load() {
   auto path = get_settings_path();
 
   std::filesystem::directory_entry entry(path);
@@ -64,17 +71,17 @@ void ApplicationSettings::save() {
   log_debug("Settings saved to %s", path.string().c_str());
 }
 
-Application::Application() {
+Application::Application(const ApplicationSettings& settings) {
   if (SDL_Init(SDL_INIT_VIDEO) != 0) {
     throw MonoklError(fmt::format("Failed to initialize SDL: %s", SDL_GetError()));
   }
 
+  this->settings = std::make_unique<ApplicationSettings>(settings);
+  event_bus = std::make_shared<EventBus>();
+
   SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
 
   sail::log::set_barrier(SailLogLevel::SAIL_LOG_LEVEL_WARNING);
-
-  settings = std::make_shared<ApplicationSettings>(ApplicationSettings::load());
-  event_bus = std::make_shared<EventBus>();
 
   log_debug("Application initialized");
   log_debug("Library versions:");
@@ -92,134 +99,104 @@ Application::~Application() {
 
   windows.clear();
 
+  if (event_bus != nullptr) {
+    event_bus.reset();
+  }
+
   log_debug("SDL application terminating");
   SDL_Quit();
-}
-
-std::shared_ptr<ApplicationSettings> Application::get_settings() const {
-  return settings;
 }
 
 std::shared_ptr<EventBus> Application::get_event_bus() {
   return event_bus;
 }
 
-void Application::run_main_loop() {
-  std::string os = SDL_GetPlatform();
+void Application::handle_sdl_event(const SDL_Event& sdl_event) {
+  if (sdl_event.type == SDL_QUIT) {
+    running = false;
+  }
 
-  int cmd_or_ctrl = (os == "Mac OS X" ? KMOD_GUI : KMOD_CTRL);
+  if (sdl_event.type == SDL_WINDOWEVENT) {
+    switch (sdl_event.window.event) {
+      case SDL_WINDOWEVENT_MAXIMIZED:
+        event_bus->publish(Event(sdl_event.window.windowID, WindowEvent(WindowEventType::Maximized)));
+        break;
 
-  bool running = true;
+      case SDL_WINDOWEVENT_MINIMIZED:
+        event_bus->publish(Event(sdl_event.window.windowID, WindowEvent(WindowEventType::Minimized)));
+        break;
 
-  while (running) {
-    SDL_Event sdl_event;
+      case SDL_WINDOWEVENT_RESTORED:
+        event_bus->publish(Event(sdl_event.window.windowID, WindowEvent(WindowEventType::Restored)));
+        break;
 
-    while (running && SDL_PollEvent(&sdl_event)) {
-      if (windows.empty()) {
-        log_debug("No open windows left, exiting");
-        running = false;
+      case SDL_WINDOWEVENT_SIZE_CHANGED:
+      case SDL_WINDOWEVENT_RESIZED: {
+        event_bus->publish(Event(sdl_event.window.windowID, WindowEvent(WindowEventType::Resized)));
+      } break;
+
+      case SDL_WINDOWEVENT_CLOSE: {
+        event_bus->publish(Event(sdl_event.window.windowID, Action(ActionType::CloseWindow)));
+      } break;
+    }
+
+    return;
+  }
+
+  if (sdl_event.type == SDL_KEYDOWN) {
+    for (auto& mapping : settings->action_mappings) {
+      if (mapping.matches(sdl_event.key)) {
+        event_bus->publish(Event(sdl_event.key.windowID, Action(mapping.action)));
         break;
       }
+    }
+  }
 
-      if (sdl_event.type == SDL_WINDOWEVENT) {
-        switch (sdl_event.window.event) {
-          case SDL_WINDOWEVENT_SIZE_CHANGED:
-          case SDL_WINDOWEVENT_RESIZED: {
-            event_bus->publish(Event(sdl_event.window.windowID, Action(ActionType::RefreshWindowSize)));
-          } break;
+  if (sdl_event.type == SDL_MOUSEWHEEL) {
+    if (sdl_event.wheel.y > 0) {
+      event_bus->publish(Event(sdl_event.wheel.windowID, Action(ActionType::ZoomIn)));
+    } else if (sdl_event.wheel.y < 0) {
+      event_bus->publish(Event(sdl_event.wheel.windowID, Action(ActionType::ZoomOut)));
+    }
+  }
 
-          case SDL_WINDOWEVENT_CLOSE: {
-            event_bus->publish(Event(sdl_event.window.windowID, Action(ActionType::CloseWindow)));
-          } break;
+  if (sdl_event.type == SDL_DROPBEGIN) {
+    event_bus->publish(Event(sdl_event.drop.windowID, Action(ActionType::BeginDropFiles)));
+  }
 
-          case SDL_WINDOWEVENT_FOCUS_GAINED: {
-            log_debug("Window %d gained focus", sdl_event.window.windowID);
-          } break;
+  if (sdl_event.type == SDL_DROPFILE) {
+    char* filename = sdl_event.drop.file;
+    std::string file(filename);
+    SDL_free(filename);
 
-          case SDL_WINDOWEVENT_RESTORED: {
-            log_debug("Window %d gained restored", sdl_event.window.windowID);
-          } break;
+    event_bus->publish(Event(sdl_event.drop.windowID, Action(ActionType::DropFile, file)));
+  }
 
-          case SDL_WINDOWEVENT_EXPOSED: {
-            log_debug("Window %d gained exposed", sdl_event.window.windowID);
-          } break;
-        }
+  if (sdl_event.type == SDL_DROPCOMPLETE) {
+    event_bus->publish(Event(sdl_event.drop.windowID, Action(ActionType::EndDropFiles)));
+  }
+}
 
-        continue;
+void Application::run_main_loop() {
+  while (running) {
+    SDL_Event sdl_event;
+    int has_event = SDL_PollEvent(&sdl_event);
+
+    if (windows_pending_cleanup.size() > 0) {
+      for (auto& window_id : windows_pending_cleanup) {
+        windows.erase(window_id);
       }
+      windows_pending_cleanup.clear();
+    }
 
-      switch (sdl_event.type) {
-        case SDL_KEYDOWN: {
-          switch (sdl_event.key.keysym.scancode) {
-            case SDL_SCANCODE_N:
-                if (sdl_event.key.keysym.mod & cmd_or_ctrl) {
-                  event_bus->publish(Event(sdl_event.key.windowID, Action(ActionType::OpenNewWindow)));
-                }
-              break;
+    if (windows.empty()) {
+      log_debug("No open windows left, exiting");
+      running = false;
+      break;
+    }
 
-            case SDL_SCANCODE_LEFT:
-              event_bus->publish(Event(sdl_event.key.windowID, Action(ActionType::GoToPrevious)));
-              break;
-
-            case SDL_SCANCODE_RIGHT:
-              event_bus->publish(Event(sdl_event.key.windowID, Action(ActionType::GoToNext)));
-              break;
-
-            case SDL_SCANCODE_HOME:
-              event_bus->publish(Event(sdl_event.key.windowID, Action(ActionType::GoToFirst)));
-              break;
-
-            case SDL_SCANCODE_END:
-              event_bus->publish(Event(sdl_event.key.windowID, Action(ActionType::GoToLast)));
-              break;
-
-            case SDL_SCANCODE_KP_0:
-              event_bus->publish(Event(sdl_event.key.windowID, Action(ActionType::FitImageToScreen)));
-              break;
-
-            case SDL_SCANCODE_KP_1:
-              event_bus->publish(Event(sdl_event.key.windowID, Action(ActionType::ResetZoom)));
-              break;
-
-            case SDL_SCANCODE_F: {
-              
-              if (sdl_event.key.keysym.mod & KMOD_SHIFT) {
-                event_bus->publish(Event(sdl_event.key.windowID, Action(ActionType::ToggleFavoritesOnly)));
-              } else {
-                event_bus->publish(Event(sdl_event.key.windowID, Action(ActionType::ToggleFavorite)));
-              }
-            } break;
-
-            default:
-              break;
-          }
-        } break;
-
-        case SDL_MOUSEWHEEL: {
-            if (sdl_event.wheel.y > 0) {
-              event_bus->publish(Event(sdl_event.wheel.windowID, Action(ActionType::ZoomIn)));
-            } else if (sdl_event.wheel.y < 0) {
-              event_bus->publish(Event(sdl_event.wheel.windowID, Action(ActionType::ZoomOut)));
-            }
-          }
-          break;
-
-        case SDL_DROPBEGIN: {
-          event_bus->publish(Event(sdl_event.drop.windowID, Action(ActionType::BeginDropFiles)));
-        } break;
-
-        case SDL_DROPFILE: {
-          char* filename = sdl_event.drop.file;
-          std::string file(filename);
-          SDL_free(filename);
-
-          event_bus->publish(Event(sdl_event.drop.windowID, Action(ActionType::DropFile, file)));
-        } break;
-
-        case SDL_DROPCOMPLETE: {
-          event_bus->publish(Event(sdl_event.drop.windowID, Action(ActionType::EndDropFiles)));
-        } break;
-      }
+    if (has_event) {
+      handle_sdl_event(sdl_event);
     }
 
     for (auto& window : windows) {
@@ -230,12 +207,17 @@ void Application::run_main_loop() {
 
 void Application::create_window(const WindowOptions& options) {
   auto window = std::unique_ptr<Window>(new Window(*this, options));
-  this->windows[window->id] = std::move(window);
+  windows[window->id] = std::move(window);
 }
 
-void Application::close_window(unsigned int window_id) {
-  auto it = windows.find(window_id);
-  if (it != windows.end()) {
-    windows.erase(it);
+void Application::on_window_closed(unsigned int window_id) {
+  windows_pending_cleanup.push_back(window_id);
+}
+
+std::optional<unsigned int> Application::get_last_window_id() {
+  if (windows.empty()) {
+    return std::nullopt;
   }
+
+  return windows.rbegin()->first;
 }

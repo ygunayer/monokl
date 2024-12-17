@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <chrono>
 
 #include <fmt/format.h>
 
@@ -15,7 +16,11 @@
 #include <SDL2/SDL_stdinc.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_hints.h>
+
+#include <SDL_video.h>
 #include <SDL_surface.h>
+
+#include <sail-common/status.h>
 
 #include "application.h"
 #include "logging.h"
@@ -34,6 +39,7 @@ struct WindowOptions {
   int width = 1366;
   int height = 768;
   bool maximized = false;
+  uint32_t flags = SDL_WINDOW_RESIZABLE;
 
   WindowOptions();
   WindowOptions(const WindowOptions& options);
@@ -92,7 +98,10 @@ private:
 
   uint32_t id = 0;
   EventBus::CallbackId callback_id = 0l;
+  bool maximized = false;
   bool has_focus = false;
+  bool needs_redraw = true;
+  bool preclose_complete = false;
   SDL_Window* window = nullptr;
   SDL_Renderer* renderer = nullptr;
   SDL_Texture* main_tex = nullptr;

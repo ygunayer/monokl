@@ -1,17 +1,5 @@
 #include "window.h"
 #include "logging.h"
-#include <SDL_surface.h>
-#include <SDL_video.h>
-#include <sail-common/status.h>
-
-// TODO: Determine the window flags based on the platform
-#ifdef __APPLE__
-#define OTHER_WINDOW_FLAGS SDL_WINDOW_METAL
-#elif defined(_WIN32)
-#define OTHER_WINDOW_FLAGS SDL_WINDOW_OPENGL
-#else
-#define OTHER_WINDOW_FLAGS SDL_WINDOW_OPENGL
-#endif
 
 using namespace monokl;
 
@@ -26,7 +14,7 @@ WindowOptions::WindowOptions(const WindowOptions& options) :
   maximized(options.maximized) {}
 
 Window::Window(Application& app, const WindowOptions& options) : app(app), options(options) {
-  uint32_t flags = SDL_WINDOW_RESIZABLE | OTHER_WINDOW_FLAGS;
+  uint32_t flags = SDL_WINDOW_RESIZABLE | options.flags;
 
   if (options.maximized) {
     flags |= SDL_WINDOW_MAXIMIZED;
@@ -77,12 +65,18 @@ Window::~Window() {
 }
 
 void Window::close() {
+  if (preclose_complete) {
+    return;
+  }
+
   app.get_event_bus()->unsubscribe(callback_id);
 
   playlist->save_settings();
   playlist.reset();
 
-  app.close_window(id);
+  app.on_window_closed(id);
+
+  preclose_complete = true;
 }
 
 void Window::refresh_size() {
@@ -99,12 +93,22 @@ void Window::refresh_size() {
 }
 
 void Window::render() {
+  if (!needs_redraw) {
+    return;
+  }
+
+  log_debug("[window:%d] Rendering, has focus? %d...", id, has_focus);
+
   SDL_SetRenderDrawColor(renderer, 49, 49, 49, 255);
   SDL_RenderClear(renderer);
+
   if (main_tex != nullptr) {
     SDL_RenderCopy(renderer, main_tex, nullptr, &render_rect);
   }
+
   SDL_RenderPresent(renderer);
+
+  needs_redraw = false;
 }
 
 void Window::begin_drop_files() {
@@ -235,10 +239,13 @@ void Window::reload_current_image() {
   image_rect.h = image.height();
 
   fit_image_to_screen();
+
+  needs_redraw = true;
 }
 
 void Window::refresh_title() {
   refresh_title(playlist->get_current());
+  needs_redraw = true;
 }
 
 void Window::refresh_title(const std::shared_ptr<ImageEntry>& entry) {
@@ -284,18 +291,65 @@ void Window::playlist_toggle_skip_hidden() {
 }
 
 void Window::handle_event(const Event& event) {
-  if (event.window_id != id) {
+  bool is_this_window = event.window_id == id;
+
+  if (event.type == EventType::WindowEvent) {
+    switch (event.window->type) {
+      case WindowEventType::Resized:
+        refresh_size();
+        break;
+
+      case WindowEventType::GainedFocus:
+        has_focus = is_this_window;
+        log_debug("[window:%d] Gained focus (me? %d)", id, is_this_window);
+        break;
+
+      case WindowEventType::LostFocus: {
+        if (is_this_window) {
+          has_focus = false;
+          log_debug("[window:%d] Lost focus", id);
+        }
+      } break;
+
+      case WindowEventType::Closed:
+        if (is_this_window) {
+          close();
+        }
+        break;
+
+      case WindowEventType::Maximized:
+        maximized = true;
+        break;
+
+      case WindowEventType::Minimized:
+      case WindowEventType::Restored:
+        maximized = false;
+        break;
+    }
+
     return;
   }
 
-  if (event.type != EventType::ActionEvent) {
+  if (!is_this_window) {
     return;
   }
 
-  switch (event.action.type) {
+  switch (event.action->type) {
     case ActionType::CloseWindow:
       close();
       break;
+
+    case ActionType::MaximizeWindow: {
+      if (maximized) {
+        SDL_RestoreWindow(window);
+      } else {
+        SDL_MaximizeWindow(window);
+      }
+    } break;
+
+    case ActionType::MinimizeWindow: {
+      SDL_MinimizeWindow(window);
+    } break;
 
     case ActionType::OpenNewWindow: {
       WindowOptions options;
@@ -326,16 +380,12 @@ void Window::handle_event(const Event& event) {
       app.create_window(options);
     } break;
 
-    case ActionType::RefreshWindowSize:
-      refresh_size();
-      break;
-
     case ActionType::BeginDropFiles:
       begin_drop_files();
       break;
 
     case ActionType::DropFile:
-      drop_file(event.action.text_data);
+      drop_file(event.action->text_data);
       break;
 
     case ActionType::EndDropFiles:
@@ -368,6 +418,10 @@ void Window::handle_event(const Event& event) {
 
     case ActionType::ResetZoom:
       set_original_image_size();
+      break;
+
+    case ActionType::FitImageToScreen:
+      fit_image_to_screen();
       break;
 
     case ActionType::ToggleFavorite:

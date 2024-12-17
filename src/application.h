@@ -3,9 +3,8 @@
 #include <memory>
 #include <string>
 #include <filesystem>
-#include <set>
 #include <map>
-#include <clocale>
+#include <atomic>
 
 #include <fmt/format.h>
 
@@ -43,6 +42,12 @@ struct WindowOptions;
 struct ApplicationSettings {
   PlaylistOptions playlist_options;
 
+  // TODO: this is currently not persisted, but loaded by the platform and injected here
+  std::vector<ActionMapping> action_mappings;
+
+  ApplicationSettings();
+  ApplicationSettings(const ApplicationSettings& settings);
+
   static ApplicationSettings load();
   static std::filesystem::path get_settings_path();
   void save();
@@ -50,24 +55,27 @@ struct ApplicationSettings {
 
 class Application {
 public:
-  Application();
+  Application(const ApplicationSettings& settings);
   ~Application();
 
   void run_main_loop();
 
-  std::shared_ptr<ApplicationSettings> get_settings() const;
   void create_window(const WindowOptions& options);
-  void close_window(unsigned int window_id);
+  void on_window_closed(unsigned int window_id);
   std::shared_ptr<EventBus> get_event_bus();
+  std::optional<unsigned int> get_last_window_id();
 
 private:
-  unsigned int focused_window_id = 0;
   bool is_first_window = true;
+  std::atomic<bool> running = true;
   int next_window_x = 0;
   int next_window_y = 0;
   std::map<unsigned int, std::unique_ptr<Window>> windows;
-  std::shared_ptr<ApplicationSettings> settings;
+  std::unique_ptr<ApplicationSettings> settings;
   std::shared_ptr<EventBus> event_bus;
+  std::vector<unsigned int> windows_pending_cleanup;
+
+  void handle_sdl_event(const SDL_Event& sdl_event);
 };
 
 }

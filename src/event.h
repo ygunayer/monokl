@@ -3,46 +3,41 @@
 #include <functional>
 #include <map>
 
+#include "action.h"
+
 namespace monokl {
 
 enum class EventType {
   ActionEvent,
+  WindowEvent,
 };
 
-enum class ActionType {
-  OpenNewWindow,
-  CloseWindow,
-  Quit,
-  BeginDropFiles,
-  DropFile,
-  RefreshWindowSize,
-  EndDropFiles,
-  ToggleFavorite,
-  ToggleFavoritesOnly,
-  GoToNext,
-  GoToPrevious,
-  GoToFirst,
-  GoToLast,
-  ZoomIn,
-  ZoomOut,
-  FitImageToScreen,
-  ResetZoom,
+enum class WindowEventType {
+  GainedFocus,
+  LostFocus,
+  Resized,
+  Closed,
+  Maximized,
+  Minimized,
+  Restored,
 };
 
-struct Action {
-  ActionType type;
-  std::string text_data;
+struct WindowEvent {
+  WindowEventType type;
 
-  explicit Action(ActionType type);
-  explicit Action(ActionType type, const std::string& text_data);
+  explicit WindowEvent(WindowEventType type);
 };
 
 struct Event {
   unsigned int window_id = 0;
   EventType type;
-  Action action;
+  std::shared_ptr<Action> action;
+  std::shared_ptr<WindowEvent> window;
 
   explicit Event(unsigned int window_id, const Action& action);
+  explicit Event(unsigned int window_id, const WindowEvent& event);
+
+  ~Event();
 };
 
 struct EventBus {
