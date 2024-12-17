@@ -25,7 +25,7 @@ WindowOptions::WindowOptions(const WindowOptions& options) :
   height(options.height),
   maximized(options.maximized) {}
 
-Window::Window(const Application& app, const WindowOptions& options) : app(app), options(options) {
+Window::Window(Application& app, const WindowOptions& options) : app(app), options(options) {
   uint32_t flags = SDL_WINDOW_RESIZABLE | OTHER_WINDOW_FLAGS;
 
   if (options.maximized) {
@@ -53,12 +53,13 @@ Window::Window(const Application& app, const WindowOptions& options) : app(app),
   playlist = std::make_shared<Playlist>();
 
   refresh_size();
+
+  callback_id = app.get_event_bus()->subscribe([this](const Event& event) {
+    handle_event(event);
+  });
 }
 
 Window::~Window() {
-  playlist->save_settings();
-  playlist.reset();
-
   if (main_tex != nullptr) {
     SDL_DestroyTexture(main_tex);
     log_debug("[window:%d] Texture destroyed", id);
@@ -73,6 +74,15 @@ Window::~Window() {
     SDL_DestroyWindow(window);
     log_debug("[window:%d] Window destroyed", id);
   }
+}
+
+void Window::close() {
+  app.get_event_bus()->unsubscribe(callback_id);
+
+  playlist->save_settings();
+  playlist.reset();
+
+  app.close_window(id);
 }
 
 void Window::refresh_size() {
@@ -102,7 +112,7 @@ void Window::begin_drop_files() {
   is_dropping_files = true;
 }
 
-void Window::drop_file(const char* file) {
+void Window::drop_file(const std::string& file) {
   dropped_files.push_back(file);
 }
 
@@ -271,4 +281,101 @@ void Window::playlist_toggle_skip_hidden() {
   playlist->options.skip_hidden = !playlist->options.skip_hidden;
   playlist->refresh_shown_entries();
   reload_current_image();
+}
+
+void Window::handle_event(const Event& event) {
+  if (event.window_id != id) {
+    return;
+  }
+
+  if (event.type != EventType::ActionEvent) {
+    return;
+  }
+
+  switch (event.action.type) {
+    case ActionType::CloseWindow:
+      close();
+      break;
+
+    case ActionType::OpenNewWindow: {
+      WindowOptions options;
+
+      int x = 0, y = 0;
+      int bl = 0, bt = 0, br = 0, bb = 0;
+      SDL_GetWindowPosition(window, &x, &y);
+      SDL_GetWindowBordersSize(window, &bt, &bl, &bb, &br);
+
+      options.display_index = SDL_GetWindowDisplayIndex(window);
+      SDL_DisplayMode display_mode;
+      SDL_GetCurrentDisplayMode(options.display_index, &display_mode);
+
+      int effective_width = display_mode.w - bl - br;
+      int effective_height = display_mode.h - bt - bb;
+
+      x += (30 > bl ? 30 : bl);
+      y += (30 > bt ? 30 : bt);
+
+      if (x + options.width >= effective_width || y + options.height >= effective_height) {
+        x = bl;
+        y = bt;
+      }
+
+      options.x = x;
+      options.y = y;
+
+      app.create_window(options);
+    } break;
+
+    case ActionType::RefreshWindowSize:
+      refresh_size();
+      break;
+
+    case ActionType::BeginDropFiles:
+      begin_drop_files();
+      break;
+
+    case ActionType::DropFile:
+      drop_file(event.action.text_data);
+      break;
+
+    case ActionType::EndDropFiles:
+      end_drop_files();
+      break;
+
+    case ActionType::GoToNext:
+      playlist_advance(1);
+      break;
+
+    case ActionType::GoToPrevious:
+      playlist_advance(-1);
+      break;
+
+    case ActionType::GoToFirst:
+      playlist_go_to_first();
+      break;
+
+    case ActionType::GoToLast:
+      playlist_go_to_last();
+      break;
+
+    case ActionType::ZoomIn:
+      change_zoom(0.1);
+      break;
+
+    case ActionType::ZoomOut:
+      change_zoom(-0.1);
+      break;
+
+    case ActionType::ResetZoom:
+      set_original_image_size();
+      break;
+
+    case ActionType::ToggleFavorite:
+      playlist_current_toggle_favorite();
+      break;
+
+    case ActionType::ToggleFavoritesOnly:
+      playlist_toggle_only_favorites();
+      break;
+  }
 }

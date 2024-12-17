@@ -17,9 +17,11 @@
 #include <SDL2/SDL_hints.h>
 #include <SDL_surface.h>
 
+#include "application.h"
 #include "logging.h"
 #include "error.h"
 #include "playlist.h"
+#include "event.h"
 
 namespace monokl {
 
@@ -62,17 +64,19 @@ public:
 private:
   friend class Application;
 
-  explicit Window(const Application& app, const WindowOptions& options);
+  explicit Window(Application& app, const WindowOptions& options);
 
-  const Application& app;
+  Application& app;
 
   WindowOptions options;
   std::shared_ptr<Playlist> playlist = nullptr;
 
+  void close();
+
   bool is_dropping_files = false;
   std::vector<std::string> dropped_files;
   void begin_drop_files();
-  void drop_file(const char* file);
+  void drop_file(const std::string& file);
   void end_drop_files();
 
   SDL_Rect window_rect;
@@ -84,7 +88,10 @@ private:
   void set_original_image_size();
   void change_zoom(float by);
 
+  void handle_event(const Event& event);
+
   uint32_t id = 0;
+  EventBus::CallbackId callback_id = 0l;
   bool has_focus = false;
   SDL_Window* window = nullptr;
   SDL_Renderer* renderer = nullptr;

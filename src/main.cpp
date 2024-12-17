@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
     Application app;
 
     WindowOptions options;
-    auto window = app.create_window(options);
+    app.create_window(options);
 
     app.run_main_loop();
   } catch (const MonoklError& e) {

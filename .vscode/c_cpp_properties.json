@@ -1,46 +1,47 @@
 {
-  "env": {
-    "myDefaultIncludePath": [
-      "${workspaceFolder}/**",
-      "${vcpkgRoot}/**"
-    ]
-  },
-  "configurations": [
-    {
-      "name": "Mac",
-      "includePath": [
-        "${myDefaultIncludePath}"
-      ],
-      "cStandard": "c17",
-      "cppStandard": "c++17",
-      "customConfigurationVariables": {
-        "debugBinaryPath": "${workspaceFolder}/bin/monokl"
-      }
+    "env": {
+        "myDefaultIncludePath": [
+            "${workspaceFolder}/**",
+            "${vcpkgRoot}/**"
+        ]
     },
-    {
-      "name": "Linux",
-      "includePath": [
-        "${myDefaultIncludePath}"
-      ],
-      "cStandard": "c17",
-      "cppStandard": "c++17",
-      "customConfigurationVariables": {
-        "debugBinaryPath": "${workspaceFolder}/bin/monokl"
-      }
-    },
-    {
-      "name": "Win32",
-      "includePath": [
-        "${myDefaultIncludePath}"
-      ],
-      "cStandard": "c17",
-      "cppStandard": "c++17",
-      "intelliSenseMode": "windows-msvc-x64",
-      "compilerPath": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.34.31933\\bin\\Hostx64\\x64\\cl.exe",
-      "customConfigurationVariables": {
-        "debugBinaryPath": "${workspaceFolder}\\bin\\Debug\\monokl.exe"
-      }
-    }
-  ],
-  "version": 4
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "${myDefaultIncludePath}"
+            ],
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "customConfigurationVariables": {
+                "debugBinaryPath": "${workspaceFolder}/bin/monokl"
+            },
+            "compileCommands": "${workspaceFolder}/build/compile_commands.json"
+        },
+        {
+            "name": "Linux",
+            "includePath": [
+                "${myDefaultIncludePath}"
+            ],
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "customConfigurationVariables": {
+                "debugBinaryPath": "${workspaceFolder}/bin/monokl"
+            }
+        },
+        {
+            "name": "Win32",
+            "includePath": [
+                "${myDefaultIncludePath}"
+            ],
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-msvc-x64",
+            "compilerPath": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.34.31933\\bin\\Hostx64\\x64\\cl.exe",
+            "customConfigurationVariables": {
+                "debugBinaryPath": "${workspaceFolder}\\bin\\Debug\\monokl.exe"
+            }
+        }
+    ],
+    "version": 4
 }

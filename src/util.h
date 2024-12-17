@@ -22,9 +22,16 @@ public:
   }
 
   static std::string ws2s(const std::wstring& wstr) {
-    using convert_typeX = std::codecvt_utf8<wchar_t>;
-    std::wstring_convert<convert_typeX, wchar_t> converterX;
-    return converterX.to_bytes(wstr);
+    size_t len = wcstombs(nullptr, wstr.c_str(), 0);
+
+    char* buffer = new char[len + 1];
+    wcstombs(buffer, wstr.c_str(), len);
+
+    std::string result(buffer, len);
+
+    delete[] buffer;
+
+    return result;
   }
 
   static bool is_valid_image(const std::filesystem::path& path) {
