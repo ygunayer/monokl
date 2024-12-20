@@ -6,7 +6,7 @@ using namespace monokl;
 
 int main(int argc, char* argv[]) {
   try {
-    auto platform = Platform::create();
+    auto platform = Platform::get();
     platform->run_main_loop();
   } catch (const MonoklError& e) {
     fmt::print("Failed to initialize application: {}\n", e.what());

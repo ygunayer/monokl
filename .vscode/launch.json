@@ -11,15 +11,10 @@
       "program": "./bin/monokl",
       "args": [],
       "cwd": "${workspaceFolder}",
-      "preLaunchTask": "CMake - Build"
-    }
-  ],
-  "inputs": [
-    {
-      "id": "debugBinaryPath",
-      "type": "command",
-      //"command": "cpptools.activeConfigCustomVariable",
-      "args": "debugBinaryPath"
+      "preLaunchTask": "CMake - Build",
+      "windows": {
+        "program": "${workspaceFolder}/bin/Debug/monokl.exe"
+      }
     }
   ]
 }

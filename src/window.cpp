@@ -1,5 +1,8 @@
 #include "window.h"
+#include "action.h"
 #include "logging.h"
+#include "platform.h"
+#include <memory>
 
 using namespace monokl;
 
@@ -42,12 +45,14 @@ Window::Window(Application& app, const WindowOptions& options) : app(app), optio
 
   refresh_size();
 
-  callback_id = app.get_event_bus()->subscribe([this](const Event& event) {
+  callback_id = app.get_event_bus()->subscribe([this](std::shared_ptr<Event> event) {
     handle_event(event);
   });
 }
 
 Window::~Window() {
+  app.get_event_bus()->unsubscribe(callback_id);
+
   if (main_tex != nullptr) {
     SDL_DestroyTexture(main_tex);
     log_debug("[window:%d] Texture destroyed", id);
@@ -109,23 +114,6 @@ void Window::render() {
   SDL_RenderPresent(renderer);
 
   needs_redraw = false;
-}
-
-void Window::begin_drop_files() {
-  log_debug("Dropping files...");
-  is_dropping_files = true;
-}
-
-void Window::drop_file(const std::string& file) {
-  dropped_files.push_back(file);
-}
-
-void Window::end_drop_files() {
-  playlist->reload_images_from(dropped_files);
-  dropped_files.clear();
-  is_dropping_files = false;
-
-  reload_current_image();
 }
 
 void Window::playlist_advance(int by) {
@@ -290,11 +278,15 @@ void Window::playlist_toggle_skip_hidden() {
   reload_current_image();
 }
 
-void Window::handle_event(const Event& event) {
-  bool is_this_window = event.window_id == id;
+void Window::handle_event(std::shared_ptr<Event> event) {
+  if (event == nullptr) {
+    return;
+  }
 
-  if (event.type == EventType::WindowEvent) {
-    switch (event.window->type) {
+  bool is_this_window = event->window_id == id;
+
+  if (event->type == EventType::WindowEvent) {
+    switch (event->window->type) {
       case WindowEventType::Resized:
         refresh_size();
         break;
@@ -325,6 +317,9 @@ void Window::handle_event(const Event& event) {
       case WindowEventType::Restored:
         maximized = false;
         break;
+
+      default:
+        break;
     }
 
     return;
@@ -334,7 +329,7 @@ void Window::handle_event(const Event& event) {
     return;
   }
 
-  switch (event.action->type) {
+  switch (event->action->type) {
     case ActionType::CloseWindow:
       close();
       break;
@@ -380,17 +375,17 @@ void Window::handle_event(const Event& event) {
       app.create_window(options);
     } break;
 
-    case ActionType::BeginDropFiles:
-      begin_drop_files();
-      break;
+    case ActionType::OpenFiles: {
+      auto action = event->action;
 
-    case ActionType::DropFile:
-      drop_file(event.action->text_data);
-      break;
-
-    case ActionType::EndDropFiles:
-      end_drop_files();
-      break;
+      auto open_files_action = std::static_pointer_cast<OpenFilesAction>(action);
+      if (open_files_action == nullptr) {
+        log_error("Failed to cast action to OpenFilesAction");
+        return;
+      }
+      playlist->reload_images_from(open_files_action->files);
+      reload_current_image();
+    } break;
 
     case ActionType::GoToNext:
       playlist_advance(1);

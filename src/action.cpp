@@ -27,3 +27,8 @@ bool ActionMapping::matches(const SDL_KeyboardEvent& event) const {
 
   return (f & event.keysym.mod) != 0;
 }
+
+OpenFilesAction::OpenFilesAction(const std::vector<std::string>& files)
+  : Action(ActionType::OpenFiles),
+    files(files)
+    {}

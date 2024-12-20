@@ -50,6 +50,8 @@ class Window : public std::enable_shared_from_this<Window> {
 public:
   ~Window();
 
+  uint32_t id = 0;
+
   void render();
 
   void refresh_size();
@@ -79,12 +81,6 @@ private:
 
   void close();
 
-  bool is_dropping_files = false;
-  std::vector<std::string> dropped_files;
-  void begin_drop_files();
-  void drop_file(const std::string& file);
-  void end_drop_files();
-
   SDL_Rect window_rect;
   SDL_Rect image_rect;
   SDL_Rect render_rect;
@@ -94,9 +90,8 @@ private:
   void set_original_image_size();
   void change_zoom(float by);
 
-  void handle_event(const Event& event);
+  void handle_event(std::shared_ptr<Event> event);
 
-  uint32_t id = 0;
   EventBus::CallbackId callback_id = 0l;
   bool maximized = false;
   bool has_focus = false;

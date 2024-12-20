@@ -45,6 +45,8 @@ struct ApplicationSettings {
   // TODO: this is currently not persisted, but loaded by the platform and injected here
   std::vector<ActionMapping> action_mappings;
 
+  std::vector<std::string> recent_files;
+
   ApplicationSettings();
   ApplicationSettings(const ApplicationSettings& settings);
 
@@ -70,6 +72,7 @@ private:
   std::atomic<bool> running = true;
   int next_window_x = 0;
   int next_window_y = 0;
+  std::map<unsigned int, std::vector<std::string>> dropped_files;
   std::map<unsigned int, std::unique_ptr<Window>> windows;
   std::unique_ptr<ApplicationSettings> settings;
   std::shared_ptr<EventBus> event_bus;

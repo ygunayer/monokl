@@ -2,8 +2,10 @@
 
 #include <functional>
 #include <map>
+#include <memory>
 
 #include "action.h"
+#include "logging.h"
 
 namespace monokl {
 
@@ -13,6 +15,7 @@ enum class EventType {
 };
 
 enum class WindowEventType {
+  Created,
   GainedFocus,
   LostFocus,
   Resized,
@@ -34,18 +37,18 @@ struct Event {
   std::shared_ptr<Action> action;
   std::shared_ptr<WindowEvent> window;
 
-  explicit Event(unsigned int window_id, const Action& action);
-  explicit Event(unsigned int window_id, const WindowEvent& event);
+  explicit Event(unsigned int window_id, std::shared_ptr<Action> action);
+  explicit Event(unsigned int window_id, std::shared_ptr<WindowEvent> event);
 
   ~Event();
 };
 
 struct EventBus {
-  using EventCallback = std::function<void(const Event&)>;
+  using EventCallback = std::function<void(std::shared_ptr<Event>)>;
   using CallbackId = unsigned long;
 
-  void publish(const Event& event);
-  CallbackId subscribe(const EventCallback& callback);
+  void publish(std::shared_ptr<Event> event);
+  CallbackId subscribe(EventCallback callback);
   void unsubscribe(CallbackId callback_id);
 
   EventBus();
@@ -54,6 +57,8 @@ struct EventBus {
 private:
   CallbackId next_callback_id = 1l;
   std::unordered_map<int, EventCallback> callbacks;
+
+  std::vector<CallbackId> pending_unsubscribes;
 };
 
 };

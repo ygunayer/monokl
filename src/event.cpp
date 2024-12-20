@@ -14,16 +14,16 @@ WindowEvent::WindowEvent(WindowEventType type)
   : type(type)
     {}
 
-Event::Event(unsigned int window_id, const Action& action)
+Event::Event(unsigned int window_id, std::shared_ptr<Action> action)
   : window_id(window_id),
     type(EventType::ActionEvent),
-    action(std::make_shared<Action>(action))
+    action(action)
     {}
 
-Event::Event(unsigned int window_id, const WindowEvent& event)
+Event::Event(unsigned int window_id, std::shared_ptr<WindowEvent> event)
   : window_id(window_id),
     type(EventType::WindowEvent),
-    window(std::make_shared<WindowEvent>(event))
+    window(event)
     {}
 
 Event::~Event() {
@@ -43,18 +43,22 @@ EventBus::~EventBus() {
   callbacks.clear();
 }
 
-void EventBus::publish(const Event& event) {
+void EventBus::publish(std::shared_ptr<Event> event) {
   for (const auto& [id, callback] : callbacks) {
     callback(event);
   }
+
+  for (const auto& id : pending_unsubscribes) {
+    callbacks.erase(id);
+  }
 }
 
-EventBus::CallbackId EventBus::subscribe(const EventCallback& callback) {
+EventBus::CallbackId EventBus::subscribe(EventCallback callback) {
   CallbackId id = next_callback_id++;
   callbacks[id] = callback;
   return id;
 }
 
 void EventBus::unsubscribe(EventBus::CallbackId id) {
-  callbacks.erase(id);
+  pending_unsubscribes.push_back(id);
 }

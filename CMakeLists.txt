@@ -35,10 +35,8 @@ if(APPLE)
 
   file(GLOB_RECURSE MACOS_SOURCES src/platforms/macos/*.cpp src/platforms/macos/*.mm)
   list(APPEND SOURCES ${MACOS_SOURCES})
-endif()
-
-if(WIN32)
-  file(GLOB_RECURSE WIN32_SOURCES src/platforms/macos/*.cpp src/platforms/macos/*.mm)
+elseif(WIN32)
+  file(GLOB_RECURSE WIN32_SOURCES src/platforms/windows/*.cpp)
   list(APPEND SOURCES ${WIN32_SOURCES} ${CMAKE_SOURCE_DIR}/docs/windows.rc)
   message(STATUS "Added Windows executable icon ${SOURCES}")
 endif()
@@ -52,7 +50,7 @@ find_package(toml11 CONFIG REQUIRED)
 
 # TODO check if release or debug and only activate in release so the console window doesn't appear
 if(WIN32)
-  target_link_options(${PROJECT_NAME} PRIVATE /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup)
+  # target_link_options(${PROJECT_NAME} PRIVATE /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup)
 endif()
 
 target_link_libraries(${PROJECT_NAME}

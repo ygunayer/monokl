@@ -2,6 +2,7 @@
 #include "logging.h"
 #include <SDL_video.h>
 #include <optional>
+#include <toml11/types.hpp>
 
 using namespace monokl;
 
@@ -45,6 +46,13 @@ ApplicationSettings ApplicationSettings::load() {
     }
   }
 
+  if (data.contains("recent_files") && data.at("recent_files").is_array()) {
+    auto recent_files = data.at("recent_files").as_array();
+    for (auto& file : recent_files) {
+      settings.recent_files.push_back(file.as_string());
+    }
+  }
+
   log_debug("Loaded settings from %s", path.string().c_str());
 
   return settings;
@@ -62,6 +70,12 @@ void ApplicationSettings::save() {
   data["playlist"]["only_favorites"] = playlist_options.only_favorites;
   data["playlist"]["skip_hidden"] = playlist_options.skip_hidden;
   data["playlist"]["sort_order"] = static_cast<int>(playlist_options.sort_order);
+
+  toml::array recent_files;
+  for (auto& file : recent_files) {
+    recent_files.push_back(file);
+  }
+  data["recent_files"] = recent_files;
 
   auto result = toml::format(data);
   std::ofstream file(path);
@@ -119,24 +133,39 @@ void Application::handle_sdl_event(const SDL_Event& sdl_event) {
   if (sdl_event.type == SDL_WINDOWEVENT) {
     switch (sdl_event.window.event) {
       case SDL_WINDOWEVENT_MAXIMIZED:
-        event_bus->publish(Event(sdl_event.window.windowID, WindowEvent(WindowEventType::Maximized)));
+        event_bus->publish(std::make_shared<Event>(
+          sdl_event.window.windowID,
+          std::make_shared<WindowEvent>(WindowEventType::Maximized)
+        ));
         break;
 
       case SDL_WINDOWEVENT_MINIMIZED:
-        event_bus->publish(Event(sdl_event.window.windowID, WindowEvent(WindowEventType::Minimized)));
+        event_bus->publish(std::make_shared<Event>(
+          sdl_event.window.windowID,
+          std::make_shared<WindowEvent>(WindowEventType::Minimized)
+        ));
         break;
 
       case SDL_WINDOWEVENT_RESTORED:
-        event_bus->publish(Event(sdl_event.window.windowID, WindowEvent(WindowEventType::Restored)));
+        event_bus->publish(std::make_shared<Event>(
+          sdl_event.window.windowID,
+          std::make_shared<WindowEvent>(WindowEventType::Restored)
+        ));
         break;
 
       case SDL_WINDOWEVENT_SIZE_CHANGED:
       case SDL_WINDOWEVENT_RESIZED: {
-        event_bus->publish(Event(sdl_event.window.windowID, WindowEvent(WindowEventType::Resized)));
+        event_bus->publish(std::make_shared<Event>(
+          sdl_event.window.windowID,
+          std::make_shared<WindowEvent>(WindowEventType::Resized)
+        ));
       } break;
 
       case SDL_WINDOWEVENT_CLOSE: {
-        event_bus->publish(Event(sdl_event.window.windowID, Action(ActionType::CloseWindow)));
+        event_bus->publish(std::make_shared<Event>(
+          sdl_event.window.windowID,
+          std::make_shared<Action>(ActionType::CloseWindow)
+        ));
       } break;
     }
 
@@ -146,7 +175,10 @@ void Application::handle_sdl_event(const SDL_Event& sdl_event) {
   if (sdl_event.type == SDL_KEYDOWN) {
     for (auto& mapping : settings->action_mappings) {
       if (mapping.matches(sdl_event.key)) {
-        event_bus->publish(Event(sdl_event.key.windowID, Action(mapping.action)));
+        event_bus->publish(std::make_shared<Event>(
+          sdl_event.key.windowID,
+          std::make_shared<Action>(mapping.action)
+        ));
         break;
       }
     }
@@ -154,14 +186,20 @@ void Application::handle_sdl_event(const SDL_Event& sdl_event) {
 
   if (sdl_event.type == SDL_MOUSEWHEEL) {
     if (sdl_event.wheel.y > 0) {
-      event_bus->publish(Event(sdl_event.wheel.windowID, Action(ActionType::ZoomIn)));
+      event_bus->publish(std::make_shared<Event>(
+        sdl_event.wheel.windowID,
+        std::make_shared<Action>(ActionType::ZoomIn)
+      ));
     } else if (sdl_event.wheel.y < 0) {
-      event_bus->publish(Event(sdl_event.wheel.windowID, Action(ActionType::ZoomOut)));
+      event_bus->publish(std::make_shared<Event>(
+        sdl_event.wheel.windowID,
+        std::make_shared<Action>(ActionType::ZoomOut)
+      ));
     }
   }
 
   if (sdl_event.type == SDL_DROPBEGIN) {
-    event_bus->publish(Event(sdl_event.drop.windowID, Action(ActionType::BeginDropFiles)));
+    dropped_files[sdl_event.drop.windowID] = std::vector<std::string>();
   }
 
   if (sdl_event.type == SDL_DROPFILE) {
@@ -169,11 +207,20 @@ void Application::handle_sdl_event(const SDL_Event& sdl_event) {
     std::string file(filename);
     SDL_free(filename);
 
-    event_bus->publish(Event(sdl_event.drop.windowID, Action(ActionType::DropFile, file)));
+    if (dropped_files.find(sdl_event.drop.windowID) != dropped_files.end()) {
+      dropped_files[sdl_event.drop.windowID].push_back(file);
+    }
   }
 
   if (sdl_event.type == SDL_DROPCOMPLETE) {
-    event_bus->publish(Event(sdl_event.drop.windowID, Action(ActionType::EndDropFiles)));
+    if (dropped_files.find(sdl_event.drop.windowID) != dropped_files.end()) {
+      auto files = dropped_files[sdl_event.drop.windowID];
+      event_bus->publish(std::make_shared<Event>(
+        sdl_event.drop.windowID,
+        std::make_shared<OpenFilesAction>(files)
+      ));
+      dropped_files.erase(sdl_event.drop.windowID);
+    }
   }
 }
 

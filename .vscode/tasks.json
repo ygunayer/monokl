@@ -7,7 +7,7 @@
         "command": "cmake",
         "args": [
           "-G",
-          "Visual Studio 20",
+          "Visual Studio 17 2022",
           "-B",
           "build"
         ]

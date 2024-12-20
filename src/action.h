@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <optional>
 
 #include <SDL_events.h>
@@ -14,9 +15,7 @@ enum class ActionType {
   CloseWindow,
   MaximizeWindow,
   MinimizeWindow,
-  BeginDropFiles,
-  DropFile,
-  EndDropFiles,
+  OpenFiles,
   ToggleFavorite,
   ToggleFavoritesOnly,
   GoToNext,
@@ -46,6 +45,12 @@ struct Action {
 
   explicit Action(ActionType type);
   explicit Action(ActionType type, const std::string& text_data);
+};
+
+struct OpenFilesAction : public Action {
+  std::vector<std::string> files;
+
+  OpenFilesAction(const std::vector<std::string>& files);
 };
 
 };
