@@ -31,6 +31,8 @@ vcpkg-manifest-install.log
 
 # IDEs
 .idea
+.kdev4
+*.kdev4
 
 # Project-specific
 bin/

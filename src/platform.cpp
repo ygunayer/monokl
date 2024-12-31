@@ -6,6 +6,8 @@ using namespace monokl;
 #include "platforms/macos/macos_platform.h"
 #elif defined(_WIN32)
 #include "platforms/windows/windows_platform.h"
+#elif defined(__linux__)
+#include "platforms/linux/linux_platform.h"
 #endif
 
 std::shared_ptr<Platform> Platform::instance = nullptr;
